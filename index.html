@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#080d20"><title>Orbit | Planetary Conquest</title>
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070c1c;color:#f3f6ff;font:14px system-ui,sans-serif;touch-action:none}canvas{display:block;width:100%;height:100%;touch-action:none}#hud{position:absolute;left:14px;top:12px;right:14px;display:flex;justify-content:space-between;align-items:start;pointer-events:none;gap:8px}#hud>div{background:#101a32dc;border:1px solid #ffffff22;border-radius:12px;padding:9px 12px;backdrop-filter:blur(8px)}strong{font-size:17px}small{display:block;color:#a9bbd8;margin-top:3px}button{pointer-events:auto;background:#263b65;color:white;border:1px solid #6882b3;border-radius:9px;padding:8px 12px;font-weight:600;cursor:pointer}#help{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap;background:#101a32c9;padding:10px 14px;border-radius:12px;color:#c9d7ef;pointer-events:none}#banner{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:25px;font-weight:800;text-shadow:0 2px 15px #000;text-align:center;pointer-events:none;opacity:0;transition:opacity .2s}#banner.visible{opacity:1}@media(max-width:450px){#hud>div{padding:7px 9px}strong{font-size:14px}#help{font-size:12px;bottom:8px}}
-</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.15.0</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="music" aria-pressed="false" aria-label="Turn music on">♫ Off</button> <button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="banner" role="status"></div><div id="help">Hold multiple planets to fire · Tap asteroids for resources</div>
+</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.15.1</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="music" aria-pressed="false" aria-label="Turn music on">♫ Off</button> <button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="banner" role="status"></div><div id="help">Hold multiple planets to fire · Tap asteroids for resources</div>
 <script>
 'use strict';
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),stats=document.getElementById('stats'),banner=document.getElementById('banner');
@@ -10,7 +10,7 @@ const TAU=Math.PI*2,colors={player:'#5bd9ff',enemy:'#ff6e8b',neutral:'#aeb8d0'};
 let W=0,H=0,dpr=1,scale=1,center={x:0,y:0},planets=[],ships=[],stars=[],drag=null,gameOver=false,last=0,acc=0,elapsed=0,seed=0,pointer=null; const HOLD_MS=380,SUN_RADIUS=29,SUN_MU=240000,PLANET_MU=36000,FIRE_INTERVAL=.11,MAX_POWER=165,POWER_PER_PIXEL=.72,MIN_PULL=12; let resources=[],resourceClock=0,resourceId=0,portals=[],storm=null,transition=0,visualClock=0,captureChime=0,conquestCount=0,captureWaves=[];let touches=new Map();let fireClock=0,systemNumber=1,systemsConquered=0,enemyClock=0,campaignWon=false;
 const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
 function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);center={x:W/2,y:H/2+16};scale=Math.min(W/850,H/750,1.1);stars=Array.from({length:140},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+.2,a:Math.random()*.5+.15}));}
-function init(){seed=45219+systemNumber*7919;elapsed=0;resources=[];resourceClock=0;portals=[];storm=null;transition=2.8;visualClock=0;enemyClock=0;campaignWon=false;ships=[];drag=null;pointer=null;fireClock=0;touches.clear();gameOver=false;banner.classList.remove('visible');const specs=[
+function init(){seed=45219+systemNumber*7919;elapsed=0;captureWaves=[];resources=[];resourceClock=0;portals=[];storm=null;transition=2.8;visualClock=0;enemyClock=0;campaignWon=false;ships=[];drag=null;pointer=null;fireClock=0;touches.clear();gameOver=false;banner.classList.remove('visible');const specs=[
 ['Home',230,3.45,.10,24,'player',42,1.7,0],
 ['Cinder',135,0.25,.18,18,'neutral',18,1.05,0],
 ['Moss',210,2.4,-.11,21,'neutral',25,1.2,0],
@@ -113,7 +113,7 @@ if(systemNumber>=3){
  }
 }
 // Each captured planet releases a slowly expanding chromatic wave.
-captureWaves=captureWaves.filter(w=>elapsed-w.at<5);
+captureWaves=captureWaves.filter(w=>elapsed>=w.at&&elapsed-w.at<5);
 for(const w of captureWaves){
  const age=elapsed-w.at,fade=Math.pow(1-age/5,1.5);
  ctx.strokeStyle='hsla('+w.hue+' 100% 68% / '+(fade*.48)+')';
