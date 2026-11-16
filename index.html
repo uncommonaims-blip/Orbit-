@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#080d20"><title>Orbit | Planetary Conquest</title>
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070c1c;color:#f3f6ff;font:14px system-ui,sans-serif;touch-action:none}canvas{display:block;width:100%;height:100%;touch-action:none}#hud{position:absolute;left:14px;top:12px;right:14px;display:flex;justify-content:space-between;align-items:start;pointer-events:none;gap:8px}#hud>div{background:#101a32dc;border:1px solid #ffffff22;border-radius:12px;padding:9px 12px;backdrop-filter:blur(8px)}strong{font-size:17px}small{display:block;color:#a9bbd8;margin-top:3px}button{pointer-events:auto;background:#263b65;color:white;border:1px solid #6882b3;border-radius:9px;padding:8px 12px;font-weight:600;cursor:pointer}#help{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap;background:#101a32c9;padding:10px 14px;border-radius:12px;color:#c9d7ef;pointer-events:none}#banner{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:25px;font-weight:800;text-shadow:0 2px 15px #000;text-align:center;pointer-events:none;opacity:0;transition:opacity .2s}#banner.visible{opacity:1}@media(max-width:450px){#hud>div{padding:7px 9px}strong{font-size:14px}#help{font-size:12px;bottom:8px}}
-</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.4.0</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="music" aria-pressed="false" aria-label="Turn music on">♫ Off</button> <button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="banner" role="status"></div><div id="help">Hold a blue planet, pull back to aim and fire continuously · Release to stop</div>
+</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.5.0</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="music" aria-pressed="false" aria-label="Turn music on">♫ Off</button> <button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="banner" role="status"></div><div id="help">Hold a blue planet, pull back to aim and fire continuously · Release to stop</div>
 <script>
 'use strict';
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),stats=document.getElementById('stats'),banner=document.getElementById('banner');
@@ -51,28 +51,59 @@ canvas.addEventListener('pointercancel',()=>{drag=null;pointer=null;fireClock=0;
 // Original procedural 8-bit space-opera score; audio starts only after user interaction.
 const musicButton=document.getElementById('music');
 let audio=null,musicEnabled=false,musicTimer=null,nextBeat=0,beatIndex=0;
-const BPM=112,BEAT=60/BPM/2;
+const BPM=120,BEAT=60/BPM/2;
 const melody=[76,null,79,83,81,79,76,null,74,76,79,null,81,79,76,null,72,null,76,79,83,81,79,null,76,74,72,null,74,76,79,null];
 const bass=[45,45,48,48,41,41,43,43];
 const chords=[[57,60,64],[60,64,67],[53,57,60],[55,59,62]];
+const arp=[0,7,12,16,12,7,4,7,0,4,7,12,16,12,7,4];
+let musicStage=0,musicPeak=0,master=null,noiseBuffer=null;
+function conquestStage(){
+  const owned=planets.filter(p=>p.owner==='player').length;
+  // Six planets: starting home world is stage 0, each capture unlocks a layer.
+  return Math.min(5,Math.max(0,owned-1));
+}
 function hz(midi){return 440*Math.pow(2,(midi-69)/12);}
 function note(midi,when,duration,type,volume,attack=.008){
   if(!audio||audio.state!=='running')return;
   const osc=audio.createOscillator(),gain=audio.createGain();
   osc.type=type;osc.frequency.setValueAtTime(hz(midi),when);
-  gain.gain.setValueAtTime(0,when);
+  gain.gain.setValueAtTime(.0001,when);
   gain.gain.linearRampToValueAtTime(volume,when+attack);
-  gain.gain.setValueAtTime(volume,when+Math.max(attack,duration*.6));
+  gain.gain.setValueAtTime(volume,when+Math.max(attack,duration*.55));
   gain.gain.exponentialRampToValueAtTime(.0001,when+duration);
-  osc.connect(gain);gain.connect(audio.destination);
+  osc.connect(gain);gain.connect(master);
   osc.start(when);osc.stop(when+duration+.015);
 }
+function drum(kind,when,volume){
+  if(!audio||audio.state!=='running')return;
+  if(kind==='kick'){
+    const osc=audio.createOscillator(),g=audio.createGain();
+    osc.type='sine';osc.frequency.setValueAtTime(140,when);osc.frequency.exponentialRampToValueAtTime(48,when+.16);
+    g.gain.setValueAtTime(volume,when);g.gain.exponentialRampToValueAtTime(.0001,when+.19);
+    osc.connect(g);g.connect(master);osc.start(when);osc.stop(when+.2);return;
+  }
+  if(!noiseBuffer){
+    noiseBuffer=audio.createBuffer(1,Math.floor(audio.sampleRate*.5),audio.sampleRate);
+    const data=noiseBuffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
+  }
+  const src=audio.createBufferSource(),filter=audio.createBiquadFilter(),g=audio.createGain();
+  src.buffer=noiseBuffer;filter.type='highpass';filter.frequency.value=kind==='hat'?6800:1600;
+  const dur=kind==='hat'?.055:.13;
+  g.gain.setValueAtTime(volume,when);g.gain.exponentialRampToValueAtTime(.0001,when+dur);
+  src.connect(filter);filter.connect(g);g.connect(master);src.start(when);src.stop(when+dur);
+}
 function scheduleBeat(i,t){
-  const m=melody[i%melody.length];
-  if(m!==null)note(m,t,BEAT*.84,'square',.025);
-  if(i%2===0)note(bass[Math.floor(i/8)%bass.length],t,BEAT*1.7,'triangle',.055);
-  if(i%8===0){const chord=chords[Math.floor(i/8)%chords.length];chord.forEach((n,j)=>note(n,t+j*.014,BEAT*6.5,'sine',.012,.12));}
-  if(i%4===2)note(84,t,BEAT*.15,'triangle',.007);
+  // Quantize stage changes to the start of a bar so new layers join in time.
+  if(i%8===0)musicStage=conquestStage();
+  const stage=musicStage,m=melody[i%melody.length],chord=chords[Math.floor(i/8)%4];
+  if(m!==null)note(m,t,BEAT*.84,'square',stage>=3?.022:.028);
+  if(i%2===0)note(bass[Math.floor(i/8)%bass.length],t,BEAT*1.65,'triangle',stage>=2?.07:.045);
+  if(i%8===0)chord.forEach((n,j)=>note(n,t+j*.014,BEAT*6.5,'sine',.012,.12));
+  if(stage>=1&&i%2===1)note(chord[0]+12,t,BEAT*.35,'triangle',.015);
+  if(stage>=2){if(i%2===0)drum('kick',t,.11);if(i%4===2)drum('snare',t,.045);}
+  if(stage>=3){drum('hat',t,i%2===0?.014:.022);note(chord[0]+arp[i%16],t,BEAT*.36,'sawtooth',.014);}
+  if(stage>=4){if(i%2===1)drum('kick',t,.075);note(chord[0]+12+arp[(i*3)%16],t,BEAT*.22,'square',.009);}
+  if(stage>=5){drum('hat',t+BEAT*.5,.012);if(i%4===0)note(chord[0]-12,t,BEAT*3.5,'sawtooth',.018,.025);}
 }
 function scheduleMusic(){
   if(!musicEnabled||!audio||audio.state!=='running')return;
@@ -81,9 +112,9 @@ function scheduleMusic(){
 async function toggleMusic(){
   if(!musicEnabled){
     try{
-      if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();
+      if(!audio){audio=new (window.AudioContext||window.webkitAudioContext)();master=audio.createGain();master.gain.value=.68;master.connect(audio.destination);}
       await audio.resume();
-      musicEnabled=true;beatIndex=0;nextBeat=audio.currentTime+.04;
+      musicEnabled=true;beatIndex=0;musicStage=conquestStage();nextBeat=audio.currentTime+.04;
       musicTimer=setInterval(scheduleMusic,70);scheduleMusic();
     }catch(err){musicEnabled=false;musicButton.title='Audio unavailable';return;}
   }else{
