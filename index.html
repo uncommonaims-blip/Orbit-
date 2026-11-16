@@ -2,12 +2,12 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#080d20"><title>Orbit | Planetary Conquest</title>
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070c1c;color:#f3f6ff;font:14px system-ui,sans-serif;touch-action:none}canvas{display:block;width:100%;height:100%;touch-action:none}#hud{position:absolute;left:14px;top:12px;right:14px;display:flex;justify-content:space-between;align-items:start;pointer-events:none;gap:8px}#hud>div{background:#101a32dc;border:1px solid #ffffff22;border-radius:12px;padding:9px 12px;backdrop-filter:blur(8px)}strong{font-size:17px}small{display:block;color:#a9bbd8;margin-top:3px}button{pointer-events:auto;background:#263b65;color:white;border:1px solid #6882b3;border-radius:9px;padding:8px 12px;font-weight:600;cursor:pointer}#help{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap;background:#101a32c9;padding:10px 14px;border-radius:12px;color:#c9d7ef;pointer-events:none}#banner{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:25px;font-weight:800;text-shadow:0 2px 15px #000;text-align:center;pointer-events:none;opacity:0;transition:opacity .2s}#banner.visible{opacity:1}@media(max-width:450px){#hud>div{padding:7px 9px}strong{font-size:14px}#help{font-size:12px;bottom:8px}}
-</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.14.1</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="music" aria-pressed="false" aria-label="Turn music on">♫ Off</button> <button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="banner" role="status"></div><div id="help">Hold multiple planets to fire · Tap asteroids for resources</div>
+</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.15.0</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="music" aria-pressed="false" aria-label="Turn music on">♫ Off</button> <button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="banner" role="status"></div><div id="help">Hold multiple planets to fire · Tap asteroids for resources</div>
 <script>
 'use strict';
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),stats=document.getElementById('stats'),banner=document.getElementById('banner');
 const TAU=Math.PI*2,colors={player:'#5bd9ff',enemy:'#ff6e8b',neutral:'#aeb8d0'};
-let W=0,H=0,dpr=1,scale=1,center={x:0,y:0},planets=[],ships=[],stars=[],drag=null,gameOver=false,last=0,acc=0,elapsed=0,seed=0,pointer=null; const HOLD_MS=380,SUN_RADIUS=29,SUN_MU=240000,PLANET_MU=36000,FIRE_INTERVAL=.11,MAX_POWER=165,POWER_PER_PIXEL=.72,MIN_PULL=12; let resources=[],resourceClock=0,resourceId=0,portals=[],storm=null,transition=0,visualClock=0,captureChime=0;let touches=new Map();let fireClock=0,systemNumber=1,systemsConquered=0,enemyClock=0,campaignWon=false;
+let W=0,H=0,dpr=1,scale=1,center={x:0,y:0},planets=[],ships=[],stars=[],drag=null,gameOver=false,last=0,acc=0,elapsed=0,seed=0,pointer=null; const HOLD_MS=380,SUN_RADIUS=29,SUN_MU=240000,PLANET_MU=36000,FIRE_INTERVAL=.11,MAX_POWER=165,POWER_PER_PIXEL=.72,MIN_PULL=12; let resources=[],resourceClock=0,resourceId=0,portals=[],storm=null,transition=0,visualClock=0,captureChime=0,conquestCount=0,captureWaves=[];let touches=new Map();let fireClock=0,systemNumber=1,systemsConquered=0,enemyClock=0,campaignWon=false;
 const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
 function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);center={x:W/2,y:H/2+16};scale=Math.min(W/850,H/750,1.1);stars=Array.from({length:140},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+.2,a:Math.random()*.5+.15}));}
 function init(){seed=45219+systemNumber*7919;elapsed=0;resources=[];resourceClock=0;portals=[];storm=null;transition=2.8;visualClock=0;enemyClock=0;campaignWon=false;ships=[];drag=null;pointer=null;fireClock=0;touches.clear();gameOver=false;banner.classList.remove('visible');const specs=[
@@ -36,7 +36,7 @@ function enemyLaunch(from,to){if(from.units<12)return;const dx=to.x-from.x,dy=to
 function gravity(x,y){let ax=0,ay=0;const bodies=[{x:center.x,y:center.y,mu:SUN_MU*scale*scale,soft:SUN_RADIUS*scale*.7},...planets.map(p=>({x:p.x,y:p.y,mu:mass(p)*scale*scale,soft:radius(p)*.85}))];for(const p of bodies){const dx=p.x-x,dy=p.y-y,d2=Math.max(dx*dx+dy*dy,p.soft*p.soft),f=p.mu/(d2*Math.sqrt(d2));ax+=dx*f;ay+=dy*f;}return {ax,ay};}
 function integrate(s,dt){const a=gravity(s.x,s.y);const nx=s.x+s.vx*dt+.5*a.ax*dt*dt,ny=s.y+s.vy*dt+.5*a.ay*dt*dt;const b=gravity(nx,ny);s.vx+=(a.ax+b.ax)*.5*dt;s.vy+=(a.ay+b.ay)*.5*dt;s.x=nx;s.y=ny;}
 function trajectory(from,dx,dy,power){const d=Math.hypot(dx,dy)||1,nx=dx/d,ny=dy/d,r=radius(from)+5;const a=from.angle+elapsed*from.speed;const sim={x:from.x+nx*r,y:from.y+ny*r,vx:nx*power-Math.sin(a)*from.orbit*scale*from.speed,vy:ny*power+Math.cos(a)*from.orbit*scale*.78*from.speed};const pts=[];for(let i=0;i<240;i++){integrate(sim,.035);if(i%3===0)pts.push([sim.x,sim.y]);if(Math.hypot(sim.x-center.x,sim.y-center.y)<SUN_RADIUS*scale||planets.some(p=>p.id!==from.id&&Math.hypot(sim.x-p.x,sim.y-p.y)<radius(p))||Math.abs(sim.x-center.x)>W*2||Math.abs(sim.y-center.y)>H*2)break;}return pts;}
-function capture(p,owner){if(p.owner===owner)p.units++;else{p.units--;if(p.units<=0){p.owner=owner;p.units=1;captureChime=elapsed;if(owner==='player')playCapture();}}}
+function capture(p,owner){if(p.owner===owner)p.units++;else{p.units--;if(p.units<=0){p.owner=owner;p.units=1;captureChime=elapsed;if(owner==='player'){conquestCount++;captureWaves.push({x:p.x,y:p.y,at:elapsed,hue:(conquestCount*53)%360});if(captureWaves.length>16)captureWaves.shift();playCapture();}}}}
 function step(dt){if(gameOver)return;elapsed+=dt;visualClock+=dt;transition=Math.max(0,transition-dt);position();updateResources(dt);for(const touch of touches.values()){
  if(!touch.drag||touch.from.owner!=='player')continue;
  const dx=touch.from.x-touch.x,dy=touch.from.y-touch.y,pull=Math.hypot(dx,dy);
@@ -58,17 +58,17 @@ function updateSystemButton(){document.getElementById('restart').textContent=gam
 function nextSystem(){if(gameOver&&campaignWon)systemNumber++;else if(!gameOver)systemNumber++;init();}
 // Visual evolution follows campaign progression, with restrained, beat-aware effects.
 function drawCosmos(){
- const intensity=1-Math.exp(-Math.max(0,(systemNumber-1)*.27+(planets.filter(p=>p.owner==='player').length-1)*.025));
+ const progression=(systemNumber-1)*2+conquestCount;const intensity=1-Math.exp(-progression*.115);const evolution=Math.log2(1+progression);
  const pulse=.5+.5*Math.sin(elapsed*(musicEnabled?2.4:1.2));
  const bg=ctx.createLinearGradient(0,0,W,H);
- bg.addColorStop(0,'#070c1c');bg.addColorStop(1,intensity>.35?'#210d43':'#0a1023');
+ bg.addColorStop(0,'#070c1c');bg.addColorStop(1,intensity>.35?'hsl('+((268+progression*11)%360)+' 65% 13%)':'#0a1023');
  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
  if(intensity>.05){
   const clouds=[[-.15,.23,'165,42,255'],[.92,.7,'0,221,255'],[.48,.15,'255,32,177'],[.35,.85,'102,35,255']];
   clouds.forEach(([cx,cy,rgb],i)=>{
    const x=W*(cx+.06*Math.sin(elapsed*.04+i)),y=H*(cy+.07*Math.cos(elapsed*.03+i));
    const rad=Math.max(W,H)*(.35+i*.07),g=ctx.createRadialGradient(x,y,0,x,y,rad);
-   g.addColorStop(0,'rgba('+rgb+','+(intensity*(.17+.075*pulse))+')');
+   g.addColorStop(0,'hsla('+((i*82+progression*17+elapsed*.65)%360)+' '+Math.min(100,70+evolution*5)+'% 54% / '+(intensity*(.17+.075*pulse))+')');
    g.addColorStop(1,'rgba('+rgb+',0)');
    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   });
@@ -83,7 +83,7 @@ function drawCosmos(){
  if(intensity>.22){
   ctx.save();ctx.translate(center.x,center.y);
   ctx.rotate(elapsed*.012);
-  const rings=Math.floor(1+intensity*4);
+  const rings=Math.min(14,Math.floor(1+evolution*2));
   for(let i=0;i<rings;i++){
    const r=(105+i*65)*scale,alpha=(intensity-.18)*(.07+.025*pulse);
    ctx.strokeStyle='rgba('+(i%2?'65,240,255':'225,78,255')+','+alpha+')';
@@ -93,8 +93,8 @@ function drawCosmos(){
   ctx.restore();
  }
 // Gentle traveling ultraviolet waves, never full-screen flashes.
-if(systemNumber>=2){
- const count=Math.min(7,Math.floor(systemNumber/2));
+if(progression>=2){
+ const count=Math.min(12,Math.floor(1+evolution*2));
  for(let j=0;j<count;j++){
   const period=5.5+j*.75,phase=((elapsed/period+j*.37)%1);
   const x=center.x+Math.sin(j*2.4)*W*.27,y=center.y+Math.cos(j*1.9)*H*.22;
@@ -111,6 +111,32 @@ if(systemNumber>=3){
   ctx.lineWidth=1;
   ctx.beginPath();ctx.arc(p.x,p.y,influence,0,TAU);ctx.stroke();
  }
+}
+// Each captured planet releases a slowly expanding chromatic wave.
+captureWaves=captureWaves.filter(w=>elapsed-w.at<5);
+for(const w of captureWaves){
+ const age=elapsed-w.at,fade=Math.pow(1-age/5,1.5);
+ ctx.strokeStyle='hsla('+w.hue+' 100% 68% / '+(fade*.48)+')';
+ ctx.lineWidth=1.5+fade*5;
+ ctx.beginPath();ctx.arc(w.x,w.y,(16+age*105)*scale,0,TAU);ctx.stroke();
+}
+// New families of flowing geometry continue unlocking as the campaign grows.
+if(progression>=5){
+ const strands=Math.min(9,Math.floor(evolution*1.6));
+ ctx.save();ctx.translate(center.x,center.y);
+ for(let k=0;k<strands;k++){
+  ctx.beginPath();
+  const phase=elapsed*(.05+k*.006)+k*TAU/strands;
+  for(let j=0;j<=65;j++){
+   const a=j/65*TAU*1.7+phase;
+   const r=(65+j*2.5+18*Math.sin(a*3+elapsed*.4))*scale;
+   const x=Math.cos(a)*r,y=Math.sin(a)*r*.76;
+   j?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  }
+  ctx.strokeStyle='hsla('+((progression*19+k*47)%360)+' 100% 66% / '+Math.min(.22,.045+evolution*.024)+')';
+  ctx.lineWidth=1.2;ctx.stroke();
+ }
+ ctx.restore();
 }
 if(transition>0){
  const phase=1-transition/3;
@@ -185,8 +211,8 @@ const themes=[
 ];
 const arp=[0,7,12,16,12,7,4,7,0,4,7,12,16,12,7,4];
 let musicStage=0,master=null,drumBuffers={},musicPeak=0,lastChordRoot=45;
-function conquestStage(){return Math.max(0,(systemNumber-1)*4+Math.max(0,planets.filter(p=>p.owner==='player').length-1));}
-function playCapture(){if(!audio||!musicEnabled||audio.state!=='running')return;const t=audio.currentTime+.02;[0,7,12].forEach((n,i)=>note(lastChordRoot+24+n,t+i*.075,.26,'sine',.018));}
+function conquestStage(){return Math.max(0,(systemNumber-1)*4+conquestCount*2+Math.max(0,planets.filter(p=>p.owner==='player').length-1));}
+function playCapture(){if(!audio||!musicEnabled||audio.state!=='running')return;const t=audio.currentTime+.02;const motif=conquestCount%4;[0,7,12,16].forEach((n,i)=>note(lastChordRoot+24+n+(motif===3?2:0),t+i*.085,.34,'sine',.016));}
 function playVictory(){if(!audio||!musicEnabled||audio.state!=='running')return;const t=audio.currentTime+.05;[0,4,7,12,16].forEach((n,i)=>note(lastChordRoot+12+n,t+i*.16,1.4,'triangle',.024));}
 function hz(m){return 440*Math.pow(2,(m-69)/12);}
 function note(m,t,d,type,vol,attack=.006){
@@ -251,9 +277,9 @@ function scheduleBeat(i,t){
  // One stage every bar, and a new musical movement every few systems.
  if(i%8===0){musicPeak=Math.max(musicPeak,conquestStage());musicStage=musicPeak;}
  const st=musicStage,bar=Math.floor(i/8),section=Math.floor(bar/8)%4;
- const movement=Math.floor(st/4)%4;
- const chord=chords[bar%4],root=roots[bar%4],theme=themes[movement];lastChordRoot=root;
- const basePhrase=theme[(i+(section===2?4:0))%theme.length];const phrase=basePhrase===null?null:basePhrase+(st>=20?Math.floor((st-20)/8)%3*2:0);
+ const movement=Math.floor(st/4)%4;const chapter=Math.floor(st/12);
+ const harmonicShift=chapter%4;const chord=chords[(bar+harmonicShift)%4],root=roots[(bar+harmonicShift)%4],theme=themes[movement];lastChordRoot=root;
+ const basePhrase=theme[(i+(section===2?4:0))%theme.length];const phrase=basePhrase===null?null:basePhrase+(st>=20?(chapter%4)*2:0);
  const build=(bar%8===7),breakdown=(st>=7&&bar%16===8);
  const energy=Math.min(1,st/12);
  // At high levels, contrasting breakdowns prevent a perpetual wall of sound.
@@ -284,6 +310,11 @@ function scheduleBeat(i,t){
  if(st>=20&&!breakdown&&i%8===4)note(root+12+(Math.floor(st/4)%3)*2,t,BEAT*3,'sine',.025,.1);
  if(st>=24&&!breakdown&&i%4===0)note(root+7+arp[(i+bar*3)%16],t,BEAT*.72,'triangle',.017);
  if(st>=28&&!breakdown&&i%8===6)drum('snare',t+BEAT*.5,.04);
+ // Beyond the original layers, rotating contrapuntal patterns and rhythmic gaps create fresh movements.
+ if(st>=12&&!breakdown&&chapter%3===1&&i%4===1)note(root+19+arp[(i+chapter*3)%16],t,BEAT*.62,'sine',.018);
+ if(st>=18&&!breakdown&&chapter%3===2&&i%8===3)bassPulse(root-12,t,BEAT*2.1,.058);
+ if(st>=24&&!breakdown&&chapter%4===3&&i%8===0)drone(root+12,t,BEAT*7.6,.022);
+ if(st>=30&&!breakdown&&i%8===((chapter*3)%8))note(root+24+(chapter%5)*2,t,BEAT*2.3,'triangle',.024,.08);
  if(st>=6&&build&&i%2===1)drum('snare',t,.04);
  if(breakdown&&i%8===0)note(root-12,t,BEAT*6,'sine',.075,.12);
 }
