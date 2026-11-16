@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#080d20"><title>Orbit | Planetary Conquest</title>
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070c1c;color:#f3f6ff;font:14px system-ui,sans-serif;touch-action:none}canvas{display:block;width:100%;height:100%;touch-action:none}#hud{position:absolute;left:14px;top:12px;right:14px;display:flex;justify-content:space-between;align-items:start;pointer-events:none;gap:8px}#hud>div{background:#101a32dc;border:1px solid #ffffff22;border-radius:12px;padding:9px 12px;backdrop-filter:blur(8px)}strong{font-size:17px}small{display:block;color:#a9bbd8;margin-top:3px}button{pointer-events:auto;background:#263b65;color:white;border:1px solid #6882b3;border-radius:9px;padding:8px 12px;font-weight:600;cursor:pointer}#help{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap;background:#101a32c9;padding:10px 14px;border-radius:12px;color:#c9d7ef;pointer-events:none}#banner{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:25px;font-weight:800;text-shadow:0 2px 15px #000;text-align:center;pointer-events:none;opacity:0;transition:opacity .2s}#banner.visible{opacity:1}@media(max-width:450px){#hud>div{padding:7px 9px}strong{font-size:14px}#help{font-size:12px;bottom:8px}}
-</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.3.0</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="banner" role="status"></div><div id="help">Hold a blue planet, pull back to aim and fire continuously · Release to stop</div>
+</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.4.0</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="music" aria-pressed="false" aria-label="Turn music on">♫ Off</button> <button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="banner" role="status"></div><div id="help">Hold a blue planet, pull back to aim and fire continuously · Release to stop</div>
 <script>
 'use strict';
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),stats=document.getElementById('stats'),banner=document.getElementById('banner');
@@ -47,5 +47,56 @@ canvas.addEventListener('pointerdown',e=>{const q=point(e),p=pick(q.x,q.y);if(p?
 canvas.addEventListener('pointermove',e=>{if(!pointer||pointer.id!==e.pointerId)return;const q=point(e);pointer.x=q.x;pointer.y=q.y;if(!drag&&performance.now()-pointer.start>=HOLD_MS){drag={from:pointer.from,x:q.x,y:q.y};fireClock=FIRE_INTERVAL;}if(drag){drag.x=q.x;drag.y=q.y;}});
 canvas.addEventListener('pointerup',e=>{if(!pointer||pointer.id!==e.pointerId)return;const q=point(e);drag=null;pointer=null;fireClock=0;});
 canvas.addEventListener('pointercancel',()=>{drag=null;pointer=null;fireClock=0;});
+
+// Original procedural 8-bit space-opera score; audio starts only after user interaction.
+const musicButton=document.getElementById('music');
+let audio=null,musicEnabled=false,musicTimer=null,nextBeat=0,beatIndex=0;
+const BPM=112,BEAT=60/BPM/2;
+const melody=[76,null,79,83,81,79,76,null,74,76,79,null,81,79,76,null,72,null,76,79,83,81,79,null,76,74,72,null,74,76,79,null];
+const bass=[45,45,48,48,41,41,43,43];
+const chords=[[57,60,64],[60,64,67],[53,57,60],[55,59,62]];
+function hz(midi){return 440*Math.pow(2,(midi-69)/12);}
+function note(midi,when,duration,type,volume,attack=.008){
+  if(!audio||audio.state!=='running')return;
+  const osc=audio.createOscillator(),gain=audio.createGain();
+  osc.type=type;osc.frequency.setValueAtTime(hz(midi),when);
+  gain.gain.setValueAtTime(0,when);
+  gain.gain.linearRampToValueAtTime(volume,when+attack);
+  gain.gain.setValueAtTime(volume,when+Math.max(attack,duration*.6));
+  gain.gain.exponentialRampToValueAtTime(.0001,when+duration);
+  osc.connect(gain);gain.connect(audio.destination);
+  osc.start(when);osc.stop(when+duration+.015);
+}
+function scheduleBeat(i,t){
+  const m=melody[i%melody.length];
+  if(m!==null)note(m,t,BEAT*.84,'square',.025);
+  if(i%2===0)note(bass[Math.floor(i/8)%bass.length],t,BEAT*1.7,'triangle',.055);
+  if(i%8===0){const chord=chords[Math.floor(i/8)%chords.length];chord.forEach((n,j)=>note(n,t+j*.014,BEAT*6.5,'sine',.012,.12));}
+  if(i%4===2)note(84,t,BEAT*.15,'triangle',.007);
+}
+function scheduleMusic(){
+  if(!musicEnabled||!audio||audio.state!=='running')return;
+  while(nextBeat<audio.currentTime+.22){scheduleBeat(beatIndex++,nextBeat);nextBeat+=BEAT;}
+}
+async function toggleMusic(){
+  if(!musicEnabled){
+    try{
+      if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();
+      await audio.resume();
+      musicEnabled=true;beatIndex=0;nextBeat=audio.currentTime+.04;
+      musicTimer=setInterval(scheduleMusic,70);scheduleMusic();
+    }catch(err){musicEnabled=false;musicButton.title='Audio unavailable';return;}
+  }else{
+    musicEnabled=false;clearInterval(musicTimer);musicTimer=null;
+    if(audio)await audio.suspend();
+  }
+  musicButton.textContent=musicEnabled?'♫ On':'♫ Off';
+  musicButton.setAttribute('aria-pressed',String(musicEnabled));
+  musicButton.setAttribute('aria-label',musicEnabled?'Turn music off':'Turn music on');
+}
+musicButton.addEventListener('click',toggleMusic);
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden&&musicEnabled){musicEnabled=false;clearInterval(musicTimer);musicTimer=null;if(audio)audio.suspend();musicButton.textContent='♫ Off';musicButton.setAttribute('aria-pressed','false');musicButton.setAttribute('aria-label','Turn music on');}
+});
 document.getElementById('restart').addEventListener('click',init);addEventListener('resize',()=>{resize();position();});resize();init();requestAnimationFrame(frame);
 </script></body></html>
