@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#080d20"><title>Orbit | Planetary Conquest</title>
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070c1c;color:#f3f6ff;font:14px system-ui,sans-serif;touch-action:none}canvas{display:block;width:100%;height:100%;touch-action:none}#hud{position:absolute;left:14px;top:12px;right:14px;display:flex;justify-content:space-between;align-items:start;pointer-events:none;gap:8px}#hud>div{background:#101a32dc;border:1px solid #ffffff22;border-radius:12px;padding:9px 12px;backdrop-filter:blur(8px)}strong{font-size:17px}small{display:block;color:#a9bbd8;margin-top:3px}button{pointer-events:auto;background:#263b65;color:white;border:1px solid #6882b3;border-radius:9px;padding:8px 12px;font-weight:600;cursor:pointer}#help{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap;background:#101a32c9;padding:10px 14px;border-radius:12px;color:#c9d7ef;pointer-events:none}#banner{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:25px;font-weight:800;text-shadow:0 2px 15px #000;text-align:center;pointer-events:none;opacity:0;transition:opacity .2s}#banner.visible{opacity:1}@media(max-width:450px){#hud>div{padding:7px 9px}strong{font-size:14px}#help{font-size:12px;bottom:8px}}
-</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.11.0</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="music" aria-pressed="false" aria-label="Turn music on">♫ Off</button> <button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="banner" role="status"></div><div id="help">Hold blue planet to fire · Tap glowing resources to replenish fleets</div>
+</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.12.0</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="music" aria-pressed="false" aria-label="Turn music on">♫ Off</button> <button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="banner" role="status"></div><div id="help">Hold blue planet to fire · Tap glowing resources to replenish fleets</div>
 <script>
 'use strict';
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),stats=document.getElementById('stats'),banner=document.getElementById('banner');
@@ -20,7 +20,7 @@ function init(){seed=45219+systemNumber*7919;elapsed=0;resources=[];resourceCloc
 planets=specs.map((s,i)=>({id:i,name:s[0],orbit:s[1],angle:s[2]+(systemNumber-1)*.37*(i%2?1:-1),speed:s[3]*(1+Math.min(.22,(systemNumber-1)*.035)),radius:s[4],owner:s[5],units:s[6]+(s[5]==='enemy'?Math.min(55,(systemNumber-1)*9):0),production:s[7],phase:s[8],x:0,y:0}));position();updateHUD();updateSystemButton();}
 function spawnResource(){const edge=Math.floor(Math.random()*4),margin=18,x=edge===0?-margin:edge===1?W+margin:Math.random()*W,y=edge===2?-margin:edge===3?H+margin:Math.random()*H;const theta=Math.atan2(center.y-y,center.x-x)+(Math.random()-.5)*1.6;resources.push({id:resourceId++,x,y,vx:Math.cos(theta)*(12+Math.random()*12),vy:Math.sin(theta)*(12+Math.random()*12),value:8+Math.floor(Math.random()*9),size:5+Math.random()*7,rotation:Math.random()*TAU,spin:(Math.random()-.5)*1.2,shape:Array.from({length:9},()=>.73+Math.random()*.5),target:null,life:0});}
 function claimResource(x,y){const r=resources.find(o=>!o.target&&Math.hypot(o.x-x,o.y-y)<Math.max(26,o.size+15));if(!r)return false;const owned=planets.filter(p=>p.owner==='player');if(!owned.length)return false;r.target=owned.reduce((best,p)=>Math.hypot(p.x-r.x,p.y-r.y)<Math.hypot(best.x-r.x,best.y-r.y)?p:best,owned[0]);return true;}
-function updateResources(dt){const owned=planets.filter(p=>p.owner==='player');resourceClock+=dt;const interval=owned.length<=1?5:11;if(resourceClock>=interval){resourceClock=0;if(resources.length<8)spawnResource();}for(let i=resources.length-1;i>=0;i--){const o=resources[i];o.life+=dt;if(o.target){if(o.target.owner!=='player')o.target=owned[0]||null;if(o.target){const dx=o.target.x-o.x,dy=o.target.y-o.y,d=Math.hypot(dx,dy)||1;o.vx+=(dx/d*260-o.vx)*Math.min(1,dt*3);o.vy+=(dy/d*260-o.vy)*Math.min(1,dt*3);if(d<radius(o.target)+8){o.target.units=Math.min(180,o.target.units+o.value);resources.splice(i,1);continue;}}}o.x+=o.vx*dt;o.y+=o.vy*dt;if(o.life>45||o.x< -80||o.x>W+80||o.y< -80||o.y>H+80)resources.splice(i,1);}}
+function updateResources(dt){const owned=planets.filter(p=>p.owner==='player');resourceClock+=dt;const interval=owned.length<=1?5/3:11/3;if(resourceClock>=interval){resourceClock=0;if(resources.length<24)spawnResource();}for(let i=resources.length-1;i>=0;i--){const o=resources[i];o.life+=dt;if(o.target){if(o.target.owner!=='player')o.target=owned[0]||null;if(o.target){const dx=o.target.x-o.x,dy=o.target.y-o.y,d=Math.hypot(dx,dy)||1;o.vx+=(dx/d*260-o.vx)*Math.min(1,dt*3);o.vy+=(dy/d*260-o.vy)*Math.min(1,dt*3);if(d<radius(o.target)+8){o.target.units=Math.min(180,o.target.units+o.value);resources.splice(i,1);continue;}}}o.x+=o.vx*dt;o.y+=o.vy*dt;if(o.life>45||o.x< -80||o.x>W+80||o.y< -80||o.y>H+80)resources.splice(i,1);}}
 function radius(p){return 1.5*(11+Math.sqrt(Math.max(0,p.units))*1.8)*scale;}
 function mass(p){return PLANET_MU*(.55+Math.max(0,p.units)/65);}
 function position(){for(const p of planets){const a=p.angle+elapsed*p.speed;p.x=center.x+Math.cos(a)*p.orbit*scale;p.y=center.y+Math.sin(a)*p.orbit*scale*.78;}}
@@ -44,14 +44,14 @@ function drawCosmos(){
  const intensity=Math.min(1,Math.max(0,(systemNumber-1)*.23+(planets.filter(p=>p.owner==='player').length-1)*.025));
  const pulse=musicEnabled?.5+.5*Math.sin(beatIndex*Math.PI/4):.5+.5*Math.sin(elapsed*1.5);
  const bg=ctx.createLinearGradient(0,0,W,H);
- bg.addColorStop(0,'#070c1c');bg.addColorStop(1,intensity>.35?'#140d30':'#0a1023');
+ bg.addColorStop(0,'#070c1c');bg.addColorStop(1,intensity>.35?'#210d43':'#0a1023');
  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
  if(intensity>.05){
-  const clouds=[[-.15,.23,'139,56,255'],[.92,.7,'25,194,255'],[.48,.15,'255,65,177']];
+  const clouds=[[-.15,.23,'165,42,255'],[.92,.7,'0,221,255'],[.48,.15,'255,32,177']];
   clouds.forEach(([cx,cy,rgb],i)=>{
    const x=W*(cx+.06*Math.sin(elapsed*.04+i)),y=H*(cy+.07*Math.cos(elapsed*.03+i));
    const rad=Math.max(W,H)*(.35+i*.07),g=ctx.createRadialGradient(x,y,0,x,y,rad);
-   g.addColorStop(0,'rgba('+rgb+','+(intensity*(.12+.055*pulse))+')');
+   g.addColorStop(0,'rgba('+rgb+','+(intensity*(.17+.075*pulse))+')');
    g.addColorStop(1,'rgba('+rgb+',0)');
    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   });
@@ -59,7 +59,7 @@ function drawCosmos(){
  for(const star of stars){
   const twinkle=intensity*(.28+.24*Math.sin(elapsed*(.8+star.r)+star.x*.05));
   ctx.globalAlpha=Math.min(.9,star.a+twinkle);
-  ctx.fillStyle=intensity>.5&&star.x%3<1?'#d7baff':'#d7e7ff';
+  ctx.fillStyle=intensity>.5&&star.x%3<1?'#e0a0ff':'#d7e7ff';
   ctx.beginPath();ctx.arc(star.x,star.y,star.r*(1+intensity*.4),0,TAU);ctx.fill();
  }
  ctx.globalAlpha=1;
@@ -69,7 +69,7 @@ function drawCosmos(){
   const rings=Math.floor(1+intensity*4);
   for(let i=0;i<rings;i++){
    const r=(105+i*65)*scale,alpha=(intensity-.18)*(.07+.025*pulse);
-   ctx.strokeStyle='rgba('+(i%2?'108,222,255':'194,100,255')+','+alpha+')';
+   ctx.strokeStyle='rgba('+(i%2?'65,240,255':'225,78,255')+','+alpha+')';
    ctx.lineWidth=1+intensity;
    ctx.beginPath();ctx.ellipse(0,0,r,r*.78,0,0,TAU);ctx.stroke();
   }
