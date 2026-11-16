@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#080d20"><title>Orbit | Planetary Conquest</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070c1c;color:#f3f6ff;font:14px system-ui,sans-serif;touch-action:none}canvas{display:block;width:100%;height:100%;touch-action:none}#hud{position:absolute;left:14px;top:12px;right:14px;display:flex;justify-content:space-between;align-items:start;pointer-events:none;gap:8px}#hud>div{background:#101a32dc;border:1px solid #ffffff22;border-radius:12px;padding:9px 12px;backdrop-filter:blur(8px)}strong{font-size:17px}small{display:block;color:#a9bbd8;margin-top:3px}button{pointer-events:auto;background:#263b65;color:white;border:1px solid #6882b3;border-radius:9px;padding:8px 12px;font-weight:600;cursor:pointer}#help{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap;background:#101a32c9;padding:10px 14px;border-radius:12px;color:#c9d7ef;pointer-events:none}#banner{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:25px;font-weight:800;text-shadow:0 2px 15px #000;text-align:center;pointer-events:none;opacity:0;transition:opacity .2s}#banner.visible{opacity:1}@media(max-width:450px){#hud>div{padding:7px 9px}strong{font-size:14px}#help{font-size:12px;bottom:8px}}
+</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT</strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="restart">New system</button><small id="mode">Drag blue planet to launch</small></div></div><div id="banner" role="status"></div><div id="help">Drag from a blue planet to another planet · Send half your fleet</div>
+<script>
+'use strict';
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),stats=document.getElementById('stats'),banner=document.getElementById('banner');
+const TAU=Math.PI*2,colors={player:'#5bd9ff',enemy:'#ff6e8b',neutral:'#aeb8d0'};
+let W=0,H=0,dpr=1,scale=1,center={x:0,y:0},planets=[],ships=[],stars=[],drag=null,gameOver=false,last=0,acc=0,elapsed=0,seed=0;
+const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);center={x:W/2,y:H/2+16};scale=Math.min(W/850,H/750,1.1);stars=Array.from({length:140},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+.2,a:Math.random()*.5+.15}));}
+function init(){seed=45219;elapsed=0;ships=[];drag=null;gameOver=false;banner.classList.remove('visible');const specs=[
+['Home',0,0,0,24,'player',42,1.7,0],
+['Cinder',135,0.25,.18,18,'neutral',18,1.05,0],
+['Moss',210,2.4,-.11,21,'neutral',25,1.2,0],
+['Azure',285,4.2,.08,22,'enemy',32,1.35,0],
+['Ember',345,1.25,-.055,23,'enemy',34,1.4,0],
+['Drift',390,3.0,.042,17,'neutral',15,1,0]];
+planets=specs.map((s,i)=>({id:i,name:s[0],orbit:s[1],angle:s[2],speed:s[3],radius:s[4],owner:s[5],units:s[6],production:s[7],phase:s[8],x:0,y:0}));position();updateHUD();}
+function position(){for(const p of planets){const a=p.angle+elapsed*p.speed;p.x=center.x+Math.cos(a)*p.orbit*scale;p.y=center.y+Math.sin(a)*p.orbit*scale*.78;}}
+function launch(from,to){if(from.owner!=='player'||from===to||from.units<2)return;const count=Math.floor(from.units*.5);from.units-=count;const dx=to.x-from.x,dy=to.y-from.y,dist=Math.hypot(dx,dy)||1;const speed=140*scale+45;for(let i=0;i<count;i++){const offset=(i-(count-1)/2)*.024;const ca=Math.cos(offset),sa=Math.sin(offset);ships.push({x:from.x+dx/dist*(from.radius+5)*scale,y:from.y+dy/dist*(from.radius+5)*scale,vx:(dx*ca-dy*sa)/dist*speed,vy:(dx*sa+dy*ca)/dist*speed,owner:'player',target:to.id,life:0,trail:[]});}}
+function enemyLaunch(from,to){if(from.units<18)return;const count=Math.floor(from.units*.45);from.units-=count;const dx=to.x-from.x,dy=to.y-from.y,d=Math.hypot(dx,dy)||1;for(let i=0;i<count;i++)ships.push({x:from.x,y:from.y,vx:dx/d*(140*scale+45),vy:dy/d*(140*scale+45),owner:'enemy',target:to.id,life:0,trail:[]});}
+function capture(p,owner){if(p.owner===owner)p.units++;else{p.units--;if(p.units<=0){p.owner=owner;p.units=1;}}}
+function step(dt){if(gameOver)return;elapsed+=dt;position();for(const p of planets){if(p.owner!=='neutral')p.units=Math.min(180,p.units+p.production*dt*(p.owner==='enemy'?.85:1));}
+if(Math.floor((elapsed-dt)/3.5)!==Math.floor(elapsed/3.5)){for(const p of planets.filter(p=>p.owner==='enemy'&&p.units>20)){const targets=planets.filter(t=>t!==p&&t.owner!=='enemy').sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y));if(targets[0])enemyLaunch(p,targets[0]);}}
+for(let i=ships.length-1;i>=0;i--){const s=ships[i];s.life+=dt;const target=planets[s.target];let ax=0,ay=0;for(const p of planets){const dx=p.x-s.x,dy=p.y-s.y,d2=dx*dx+dy*dy,soft=Math.max(d2,(p.radius*scale+14)**2),d=Math.sqrt(soft);const force=(p===target?260000:105000)*scale/soft;ax+=dx/d*force;ay+=dy/d*force;}
+s.vx+=ax*dt;s.vy+=ay*dt;const speed=Math.hypot(s.vx,s.vy);if(speed>290)s.vx*=290/speed,s.vy*=290/speed;s.x+=s.vx*dt;s.y+=s.vy*dt;
+s.trail.push([s.x,s.y]);if(s.trail.length>7)s.trail.shift();let hit=false;for(const p of planets){if(Math.hypot(s.x-p.x,s.y-p.y)<p.radius*scale+3){capture(p,s.owner);hit=true;break;}}
+if(hit||s.life>18||s.x< -150||s.x>W+150||s.y< -150||s.y>H+150)ships.splice(i,1);}
+const player=planets.some(p=>p.owner==='player'),enemy=planets.some(p=>p.owner==='enemy');if(!player||!enemy){gameOver=true;banner.textContent=player?'System conquered!':'System lost';banner.classList.add('visible');}updateHUD();}
+function updateHUD(){stats.textContent='Blue: '+planets.filter(p=>p.owner==='player').length+' · Red: '+planets.filter(p=>p.owner==='enemy').length+' · Fleets: '+ships.length;}
+function draw(){ctx.clearRect(0,0,W,H);ctx.fillStyle='#070c1c';ctx.fillRect(0,0,W,H);for(const s of stars){ctx.globalAlpha=s.a;ctx.fillStyle='#d7e7ff';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,TAU);ctx.fill();}ctx.globalAlpha=1;
+for(const p of planets){if(!p.orbit)continue;ctx.beginPath();ctx.ellipse(center.x,center.y,p.orbit*scale,p.orbit*scale*.78,0,0,TAU);ctx.strokeStyle='#6e83ae24';ctx.lineWidth=1;ctx.stroke();}
+for(const s of ships){ctx.strokeStyle=s.owner==='player'?'#5bd9ff77':'#ff6e8b77';ctx.lineWidth=1.5;ctx.beginPath();s.trail.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();ctx.fillStyle=colors[s.owner];ctx.beginPath();ctx.arc(s.x,s.y,2.2,0,TAU);ctx.fill();}
+for(const p of planets){const r=p.radius*scale;const col=colors[p.owner];const g=ctx.createRadialGradient(p.x-r*.4,p.y-r*.5,1,p.x,p.y,r*1.6);g.addColorStop(0,p.owner==='player'?'#c9f7ff':p.owner==='enemy'?'#ffc4cc':'#f0f3ff');g.addColorStop(.4,col);g.addColorStop(1,'#10182f');ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,r,0,TAU);ctx.fill();ctx.strokeStyle=col;ctx.lineWidth=1.6;ctx.stroke();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold '+Math.max(11,13*scale)+'px system-ui';ctx.fillText(Math.floor(p.units),p.x,p.y+4);ctx.font='11px system-ui';ctx.fillStyle='#cbd5eb';ctx.fillText(p.name,p.x,p.y+r+15);}
+if(drag){ctx.beginPath();ctx.moveTo(drag.from.x,drag.from.y);ctx.lineTo(drag.x,drag.y);ctx.strokeStyle='#5bd9ff';ctx.setLineDash([7,5]);ctx.lineWidth=2;ctx.stroke();ctx.setLineDash([]);}}
+function frame(t){if(!last)last=t;acc+=Math.min((t-last)/1000,.05);last=t;while(acc>=1/60){step(1/60);acc-=1/60;}draw();requestAnimationFrame(frame);}
+function point(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
+function pick(x,y){return planets.find(p=>Math.hypot(x-p.x,y-p.y)<Math.max(p.radius*scale+13,22));}
+canvas.addEventListener('pointerdown',e=>{const q=point(e),p=pick(q.x,q.y);if(p?.owner==='player'){drag={from:p,x:q.x,y:q.y};canvas.setPointerCapture(e.pointerId);}});
+canvas.addEventListener('pointermove',e=>{if(drag){const q=point(e);drag.x=q.x;drag.y=q.y;}});
+canvas.addEventListener('pointerup',e=>{if(!drag)return;const q=point(e),p=pick(q.x,q.y);if(p&&p!==drag.from)launch(drag.from,p);drag=null;});
+canvas.addEventListener('pointercancel',()=>drag=null);
+document.getElementById('restart').addEventListener('click',init);addEventListener('resize',()=>{resize();position();});resize();init();requestAnimationFrame(frame);
+</script></body></html>
