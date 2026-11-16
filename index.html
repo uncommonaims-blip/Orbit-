@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#080d20"><title>Orbit | Planetary Conquest</title>
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070c1c;color:#f3f6ff;font:14px system-ui,sans-serif;touch-action:none}canvas{display:block;width:100%;height:100%;touch-action:none}#hud{position:absolute;left:14px;top:12px;right:14px;display:flex;justify-content:space-between;align-items:start;pointer-events:none;gap:8px}#hud>div{background:#101a32dc;border:1px solid #ffffff22;border-radius:12px;padding:9px 12px;backdrop-filter:blur(8px)}strong{font-size:17px}small{display:block;color:#a9bbd8;margin-top:3px}button{pointer-events:auto;background:#263b65;color:white;border:1px solid #6882b3;border-radius:9px;padding:8px 12px;font-weight:600;cursor:pointer}#help{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap;background:#101a32c9;padding:10px 14px;border-radius:12px;color:#c9d7ef;pointer-events:none}#banner{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:25px;font-weight:800;text-shadow:0 2px 15px #000;text-align:center;pointer-events:none;opacity:0;transition:opacity .2s}#banner.visible{opacity:1}@media(max-width:450px){#hud>div{padding:7px 9px}strong{font-size:14px}#help{font-size:12px;bottom:8px}}
-</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.7.0</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="music" aria-pressed="false" aria-label="Turn music on">♫ Off</button> <button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="banner" role="status"></div><div id="help">Hold a blue planet, pull back to aim and fire continuously · Release to stop</div>
+</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.8.0</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="music" aria-pressed="false" aria-label="Turn music on">♫ Off</button> <button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="banner" role="status"></div><div id="help">Hold a blue planet, pull back to aim and fire continuously · Release to stop</div>
 <script>
 'use strict';
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),stats=document.getElementById('stats'),banner=document.getElementById('banner');
@@ -75,6 +75,33 @@ function note(m,t,d,type,vol,attack=.006){
  o.connect(g);g.connect(master);o.start(t);o.stop(end+.01);
  o.onended=()=>{o.disconnect();g.disconnect();};
 }
+// Rounded sub-bass with a brief filter sweep: weight without constant high-frequency buzz.
+function bassPulse(m,t,d,vol){
+ if(!audio||audio.state!=='running')return;
+ const osc=audio.createOscillator(),sub=audio.createOscillator(),filter=audio.createBiquadFilter(),g=audio.createGain();
+ const end=t+d;
+ osc.type='sawtooth';sub.type='sine';osc.frequency.setValueAtTime(hz(m),t);sub.frequency.setValueAtTime(hz(m-12),t);
+ filter.type='lowpass';filter.Q.value=.75;filter.frequency.setValueAtTime(450,t);filter.frequency.exponentialRampToValueAtTime(110,t+Math.min(.23,d*.65));
+ g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol,t+.014);g.gain.exponentialRampToValueAtTime(.0001,end);
+ const blend=audio.createGain();blend.gain.value=.65;
+ osc.connect(filter);filter.connect(g);sub.connect(blend);blend.connect(g);g.connect(master);
+ osc.start(t);sub.start(t);osc.stop(end+.01);sub.stop(end+.01);
+ osc.onended=()=>{osc.disconnect();sub.disconnect();filter.disconnect();blend.disconnect();g.disconnect();};
+}
+// A softly moving harmonic bed, introduced as the campaign becomes cinematic.
+function drone(m,t,d,vol){
+ if(!audio||audio.state!=='running')return;
+ const g=audio.createGain(),filter=audio.createBiquadFilter(),voices=[];
+ filter.type='lowpass';filter.frequency.value=310;
+ g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol,t+.55);
+ g.gain.setValueAtTime(vol,t+Math.max(.56,d-.7));g.gain.exponentialRampToValueAtTime(.0001,t+d);
+ filter.connect(g);g.connect(master);
+ for(const detune of [-5,5]){
+  const o=audio.createOscillator();o.type='triangle';o.frequency.setValueAtTime(hz(m),t);o.detune.value=detune;
+  o.connect(filter);o.start(t);o.stop(t+d+.02);voices.push(o);
+ }
+ voices[0].onended=()=>{voices.forEach(o=>o.disconnect());filter.disconnect();g.disconnect();};
+}
 function createDrums(){
  const rate=audio.sampleRate;
  for(const kind of ['kick','snare','hat']){
@@ -109,7 +136,17 @@ function scheduleBeat(i,t){
  // At high levels, contrasting breakdowns prevent a perpetual wall of sound.
  if(phrase!==null&&!breakdown&&i%((st<2)?2:1)===0)
    note(phrase+(section===3&&st>=8?12:0),t,BEAT*(st>=6?.65:1.05),st>=8?'sawtooth':'square',.018+energy*.008);
- if(i%2===0)note(root-(st>=5?12:0),t,BEAT*(st>=5?1.55:1.8),'triangle',.045+energy*.02);
+ // Early systems keep the simple bass; later systems gain a spacious, syncopated pulse.
+ if(st<3&&i%2===0)note(root,t,BEAT*1.55,'triangle',.038);
+ if(st>=3&&!breakdown){
+  const groove=i%16;
+  if([0,3,6,8,11,14].includes(groove)){
+   const accent=groove===0||groove===8;
+   bassPulse(root-(st>=7?12:0),t,BEAT*(accent?1.75:1.15),accent?.075:.052);
+  }
+ }
+ if(st>=4&&i%16===0)drone(root-12,t,BEAT*15.8,st>=9?.025:.014);
+ if(st>=10&&i%16===0)drone(root+7,t,BEAT*15.8,.009);
  if(i%8===0)chord.forEach(n=>note(n+(movement>=2?12:0),t,BEAT*(breakdown?7:4),'sine',.011,.06));
  if(st>=2&&!breakdown&&i%2===0)drum('kick',t,.12);
  if(st>=3&&!breakdown&&i%4===2)drum('snare',t,.085);
