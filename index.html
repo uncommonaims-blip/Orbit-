@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#080d20"><title>Orbit | Planetary Conquest</title>
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070c1c;color:#f3f6ff;font:14px system-ui,sans-serif;touch-action:none}canvas{display:block;width:100%;height:100%;touch-action:none}#hud{position:absolute;left:14px;top:12px;right:14px;display:flex;justify-content:space-between;align-items:start;pointer-events:none;gap:8px}#hud>div{background:#101a32dc;border:1px solid #ffffff22;border-radius:12px;padding:9px 12px;backdrop-filter:blur(8px)}strong{font-size:17px}small{display:block;color:#a9bbd8;margin-top:3px}button{pointer-events:auto;background:#263b65;color:white;border:1px solid #6882b3;border-radius:9px;padding:8px 12px;font-weight:600;cursor:pointer}#help{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap;background:#101a32c9;padding:10px 14px;border-radius:12px;color:#c9d7ef;pointer-events:none}#banner{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:25px;font-weight:800;text-shadow:0 2px 15px #000;text-align:center;pointer-events:none;opacity:0;transition:opacity .2s}#banner.visible{opacity:1}#equipment{position:absolute;top:76px;left:0;z-index:3;display:flex;align-items:center;justify-content:space-around;gap:3px;width:100vw;max-width:100vw;padding:6px 4px;border:1px solid #6c84ac88;border-radius:12px;background:#101a32e8;backdrop-filter:blur(9px);touch-action:none}#equipment button{font-size:17px;padding:4px 5px;min-width:0;flex:1;background:transparent;border:1px solid transparent}#equipment .equipment-slot{display:flex;flex:1;min-width:0;flex-direction:column;align-items:center;justify-content:center}#equipment .equipment-slot small{font-size:10px;line-height:1.1;color:#cbd7e8}#equipment #equipStatus{max-width:100px;white-space:normal;line-height:1.2}#equipment .grip{flex:0 0 18px}#equipment button.active{border-color:#7ef3ff;background:#225b70}#equipment .grip{cursor:grab;color:#a9bbd8;padding:4px;font-size:17px}#equipment small{margin:0;font-size:10px;white-space:nowrap}#sunMeter{position:absolute;z-index:3;top:145px;right:10px;width:min(190px,48vw);padding:5px 9px;background:#101a32c9;border:1px solid #ffffff33;border-radius:9px;pointer-events:none}#sunLabel{font-size:11px;font-weight:700;color:#ffca79}#sunTrack{height:9px;margin-top:4px;border-radius:6px;background:#37202c;overflow:hidden}#sunFill{width:0%;height:100%;background:linear-gradient(90deg,#ffd05c,#ff702c,#f32961);transition:width .25s}#equipment.wobble{outline:2px dashed #7ef3ff;animation:wobble .3s infinite alternate}@keyframes wobble{from{rotate:-1deg}to{rotate:1deg}}@media(max-width:450px){#hud>div{padding:7px 9px}strong{font-size:14px}#help{font-size:12px;bottom:8px}}
-</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.21.0</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="music" aria-pressed="false" aria-label="Turn music on">♫ Off</button> <button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="equipment"><span class="grip" id="grip" title="Hold to move console">⠿</span><small id="equipStatus">Select a blue planet</small><div class="equipment-slot"><button data-weapon="rocket" class="active" title="Rockets">🚀</button><small id="stat-rocket">∞</small></div><div class="equipment-slot"><button data-weapon="laser" title="Laser pulses">⚡</button><small id="stat-laser">0</small></div><div class="equipment-slot"><button data-weapon="photon" title="Homing photons">✦</button><small id="stat-photon">0</small></div><div class="equipment-slot"><button data-weapon="drive" title="Planetary drive">➤</button><small id="stat-drive">0</small></div><div class="equipment-slot"><button data-weapon="shield" title="Shield status">⬡</button><small id="stat-shield">0</small></div><div class="equipment-slot"><button data-weapon="atomic" title="Atomic probe: select your planet, then tap an enemy">☢</button><small id="stat-atomic">0</small></div></div><div id="sunMeter"><span id="sunLabel">☀ SUN · 0%</span><div id="sunTrack"><div id="sunFill"></div></div></div><div id="banner" role="status"></div><div id="help">Hold multiple planets to fire · Tap asteroids for resources</div>
+</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.22.0</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="music" aria-pressed="false" aria-label="Turn music on">♫ Off</button> <button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="equipment"><span class="grip" id="grip" title="Hold to move console">⠿</span><small id="equipStatus">Select a blue planet</small><div class="equipment-slot"><button data-weapon="rocket" class="active" title="Rockets">🚀</button><small id="stat-rocket">∞</small></div><div class="equipment-slot"><button data-weapon="laser" title="Laser pulses">⚡</button><small id="stat-laser">0</small></div><div class="equipment-slot"><button data-weapon="photon" title="Homing photons">✦</button><small id="stat-photon">0</small></div><div class="equipment-slot"><button data-weapon="drive" title="Planetary drive">➤</button><small id="stat-drive">0</small></div><div class="equipment-slot"><button data-weapon="shield" title="Shield status">⬡</button><small id="stat-shield">0</small></div><div class="equipment-slot"><button data-weapon="atomic" title="Atomic probe: select your planet, then tap an enemy">☢</button><small id="stat-atomic">0</small></div></div><div id="sunMeter"><span id="sunLabel">☀ SUN · 0%</span><div id="sunTrack"><div id="sunFill"></div></div></div><div id="banner" role="status"></div><div id="help">Hold multiple planets to fire · Tap asteroids for resources</div>
 <script>
 'use strict';
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),stats=document.getElementById('stats'),banner=document.getElementById('banner');
@@ -347,44 +347,94 @@ function drum(kind,t,vol){
  src.connect(g);g.connect(master);src.start(t);
  src.onended=()=>{src.disconnect();g.disconnect();};
 }
+// Phrase-directed composition: repeat, answer, develop, and resolve motifs over 8-bar sentences.
+// Every generated decision is deterministic within its phrase, preventing note-to-note wandering.
+const musicalForms=[
+ {motif:[0,2,4,null,3,2,1,null],answer:[2,3,4,5,4,2,1,0]},
+ {motif:[0,null,2,3,4,null,2,1],answer:[4,3,2,null,1,2,0,null]},
+ {motif:[0,1,3,4,null,3,2,1],answer:[3,4,5,null,4,2,1,0]},
+ {motif:[0,2,null,4,5,4,2,null],answer:[4,5,6,5,3,2,1,0]}
+];
+const harmonicRoutes=[
+ [0,5,3,4,0,5,4,0], // home -> departure -> dominant -> arrival
+ [0,3,5,4,0,2,4,0],
+ [0,5,2,4,3,5,4,0],
+ [0,3,4,5,2,4,5,0]
+];
+function scoreState(i){
+ const beat=i%8,bar=Math.floor(i/8),sentence=Math.floor(bar/8);
+ const stage=Math.max(musicPeak,conquestStage()),world=worldState();
+ const form=musicalForms[(Math.floor(stage/10)+sentence)%musicalForms.length];
+ const route=harmonicRoutes[(Math.floor(stage/10)+Math.floor(sentence/2))%harmonicRoutes.length];
+ const harmonicDegree=route[bar%8],root=modeNote(45,harmonicDegree,world.mood);
+ const phase=bar%8,question=phase<4,turn=phase%4;
+ const motif=question?form.motif:form.answer;
+ const motifIndex=(beat+turn*2)%8;
+ const original=motif[motifIndex];
+ const seed=world.seed+Math.floor(sentence/2)*53;
+ const answerTransform=question?0:((sentence%3===1)?1:0);
+ const variation=turn===2&&hash(seed+motifIndex*11)>.72?1:0;
+ const degree=original===null?null:original+answerTransform+variation;
+ // Every fourth bar is a cadence. The final note returns to the tonic.
+ const cadence=phase===7&&beat>=6;
+ const melodicDegree=cadence?(beat===6?1:0):degree;
+ const register=stage>=25&&sentence%4===3?19:12;
+ return {beat,bar,sentence,stage,world,root,degree:melodicDegree,register,question,turn,seed,phase};
+}
 function scheduleBeat(i,t){
- // A rotating orchestration: musical chapters transform the arrangement instead of stacking voices.
  if(i%8===0){musicPeak=Math.max(musicPeak,conquestStage());musicStage=musicPeak;}
- const st=musicStage,bar=Math.floor(i/8),section=Math.floor(bar/8)%4;
- const world=worldState(),chapter=Math.floor(st/8),movement=world.mood,variation=Math.floor(chapter/4)%4;
- const chord=chords[(bar+variation)%4],root=roots[(bar+variation)%4];
- const theme=themes[movement],motifStep=(i+section*3)%16,base=theme[motifStep];
- const seed=world.seed+Math.floor(bar/4)*13,mutation=hash(seed+motifStep*7);
- const phrase=base===null||mutation<.12?null:modeNote(root+24,Math.max(0,Math.round((base-72)/2)+(mutation>.83?2:0)),movement);
- const dramaticAge=elapsed-dramatic.at,arrival=dramaticAge>=0&&dramaticAge<18;
- const arc=arrival?(dramaticAge<3?1:dramaticAge<7?2:dramaticAge<12?3:4):0;
- const breakdown=arc===4||(st>=7&&(bar%16===8||bar%16===9)&&arc===0);
- const build=bar%8===7,mode=chapter%4;
- const leadAllowed=arc!==1&&arc!==4,drumsAllowed=arc!==1&&arc!==4;
- const peak=arc===3,anticipation=arc===2;
+ const m=scoreState(i),{beat,bar,stage,world,root,degree,register,question,turn,seed,phase}=m;
+ const arc=dramaticPhase(),peak=arc===3,anticipation=arc===2;
+ const resolution=arc===4,quiet=arc===1||resolution;
+ const build=phase===3||phase===6;
+ const cadence=phase===7;
+ const rootBass=root-12,leadRoot=45+register;
  lastChordRoot=root;
- // Lead, bass, and one supporting voice occupy distinct musical registers.
- if(phrase!==null&&leadAllowed&&!breakdown&&(peak||st>=4||i%2===0))
-  note(phrase+(section===3&&st>=8?12:0),t,BEAT*(mode===2?.95:.72),mode===0?'triangle':mode===1?'square':mode===2?'sine':'sawtooth',.017+(st>=5?.005:0));
- if(st<3&&i%2===0)note(root,t,BEAT*1.55,'triangle',.036);
- if(st>=3&&!breakdown&&arc!==1){
-  const groove=i%16;
-  const density=[.34,.43,.27,.38][movement],accent=hash(seed+groove*3);
-  if(groove===0||groove===8||accent<density)bassPulse(root-(st>=7?12:0),t,BEAT*(groove%8===0?1.7:1.1),.046+(groove%8===0?.018:0));
+ // Three-part musical sentence: presentation, answer, and cadence.
+ // Rhythmic breathing is intentional; no probabilistic removal of the melody.
+ const leadPresent=degree!==null&&!quiet&&(stage>=4||beat%2===0);
+ const isAccent=beat===0||beat===4||cadence&&beat>=6;
+ const melodicType=['triangle','sine','triangle','sawtooth'][world.mood];
+ if(leadPresent){
+   const pitch=modeNote(leadRoot,degree+Math.floor(phase/4)*0,world.mood);
+   const duration=beat===0||beat===4?BEAT*1.65:BEAT*(cadence?1.6:.88);
+   note(pitch,t,duration,melodicType,peak?.026:.019,melodicType==='sawtooth'?.018:.012);
  }
- if(st>=2&&i%16===0)drone(root+(mode===2?7:0),t,BEAT*15.5,.035+(mode===2?.01:0));
- if(i%8===0)chord.forEach((n,j)=>note(n+(mode===3?12:0),t,BEAT*(breakdown?6:3.5),'sine',.008,.07));
- if(st>=2&&drumsAllowed&&!breakdown&&i%2===0)drum('kick',t,peak?.14:.10);
- if(st>=3&&drumsAllowed&&!breakdown&&i%4===2)drum('snare',t,peak?.085:.063);
- if(st>=4&&drumsAllowed&&!breakdown&&((mode===2&&i%2===0)||(mode!==2&&i%2===1)))drum('hat',t,.025);
- if(st>=5&&!breakdown&&!anticipation&&mode===1&&i%2===1&&hash(seed+i*11)>.24)note(modeNote(root+12,(i+bar)%14,movement),t,BEAT*.42,'triangle',.014);
- if(st>=8&&!breakdown&&!anticipation&&mode===2&&i%4===1)note(modeNote(root+24,(i*3+bar)%14,movement),t,BEAT*.65,'sine',.014);
- if(st>=12&&!breakdown&&!anticipation&&mode===3&&i%4===3)note(modeNote(root+19,(i+chapter)%14,movement),t,BEAT*.48,'triangle',.014);
- if(st>=16&&!breakdown&&!anticipation&&mode===0&&i%8===4)note(root+24+(variation%3)*2,t,BEAT*2,'sine',.018,.08);
- if((st>=6&&build||anticipation)&&i%4===3)drum('snare',t,anticipation?.055:.03);
- if(peak&&i%4===0)note(modeNote(root+36,(i/4+dramatic.level)%14,movement),t,BEAT*1.6,'triangle',.026,.04);
- if(peak&&i%2===1)drum('hat',t+BEAT*.5,.032);
- if(breakdown&&i%8===0)note(root-12,t,BEAT*6,'sine',.048,.12);
+ // Countermelody answers the lead in the gaps, instead of doubling every note.
+ if(stage>=12&&!quiet&&!anticipation&&degree===null&&beat%2===1){
+   const answerDegree=musicalForms[(Math.floor(stage/10)+m.sentence)%4].answer[(beat+2)%8];
+   if(answerDegree!==null)note(modeNote(57,answerDegree,world.mood),t,BEAT*1.25,'sine',.011,.035);
+ }
+ // Functional bass movement: roots, fifths, and occasional syncopated approach notes.
+ const groove=stage<5?[0,4]:stage<15?[0,3,4,7]:[0,2,3,4,6,7];
+ const bassOn=!quiet&&(groove.includes(beat)||peak&&beat===5);
+ if(bassOn){
+   const approach=(beat===7&&phase!==7)?-1:beat===3||beat===6?7:0;
+   bassPulse(rootBass+approach,t,BEAT*(beat===0?1.7:.92),peak?.062:.047);
+ }
+ if(stage<3&&beat===0)note(root,t,BEAT*3,'triangle',.025);
+ // Chord changes align to harmonic sentences and never blanket the melody.
+ if(beat===0){
+   const third=modeNote(root,2,world.mood),fifth=modeNote(root,4,world.mood);
+   const voicing=[root+12,third+12,fifth+12];
+   voicing.forEach((pitch,j)=>note(pitch,t,BEAT*(quiet?7:3.3),'sine',.0065,.12+j*.035));
+ }
+ if(stage>=2&&beat===0&&bar%2===0)drone(root-12,t,BEAT*15.2,.021);
+ // Percussion grows in sophistication by varying accents and phrase structure.
+ if(stage>=2&&!quiet){
+   if(beat===0||beat===4||stage>=14&&beat===6)drum('kick',t,peak?.12:.095);
+   if(stage>=3&&(beat===2||beat===6))drum('snare',t,peak?.075:.055);
+   if(stage>=6&&(beat%2===1||stage>=18&&beat%2===0))drum('hat',t,.018);
+   if(stage>=11&&build&&beat===7)drum('snare',t+BEAT*.5,.025);
+ }
+ // At major arrivals, the familiar motif is harmonized, not replaced by noise.
+ if(peak&&degree!==null&&isAccent){
+   const harmonyDegree=degree+2;
+   note(modeNote(leadRoot-12,harmonyDegree,world.mood),t,BEAT*1.4,'triangle',.012,.05);
+ }
+ // Suspended anticipations and gentle decompression between climaxes.
+ if(anticipation&&beat===0)note(modeNote(root,4,world.mood),t,BEAT*4,'sine',.018,.16);
+ if(resolution&&beat===0)note(root-12,t,BEAT*6,'sine',.029,.18);
 }
 function scheduleMusic(){
  if(!musicEnabled||!audio)return;
