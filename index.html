@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#080d20"><title>Orbit | Planetary Conquest</title>
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070c1c;color:#f3f6ff;font:14px system-ui,sans-serif;touch-action:none}canvas{display:block;width:100%;height:100%;touch-action:none}#hud{position:absolute;left:14px;top:12px;right:14px;display:flex;justify-content:space-between;align-items:start;pointer-events:none;gap:8px}#hud>div{background:#101a32dc;border:1px solid #ffffff22;border-radius:12px;padding:9px 12px;backdrop-filter:blur(8px)}strong{font-size:17px}small{display:block;color:#a9bbd8;margin-top:3px}button{pointer-events:auto;background:#263b65;color:white;border:1px solid #6882b3;border-radius:9px;padding:8px 12px;font-weight:600;cursor:pointer}#help{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap;background:#101a32c9;padding:10px 14px;border-radius:12px;color:#c9d7ef;pointer-events:none}#banner{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:25px;font-weight:800;text-shadow:0 2px 15px #000;text-align:center;pointer-events:none;opacity:0;transition:opacity .2s}#banner.visible{opacity:1}#equipment{position:absolute;top:76px;left:0;z-index:3;display:flex;align-items:center;justify-content:space-around;gap:3px;width:100vw;max-width:100vw;padding:6px 4px;border:1px solid #6c84ac88;border-radius:12px;background:#101a32e8;backdrop-filter:blur(9px);touch-action:none}#equipment button{font-size:17px;padding:4px 5px;min-width:0;flex:1;background:transparent;border:1px solid transparent}#equipment .equipment-slot{display:flex;flex:1;min-width:0;flex-direction:column;align-items:center;justify-content:center}#equipment .equipment-slot small{font-size:10px;line-height:1.1;color:#cbd7e8}#equipment #equipStatus{max-width:100px;white-space:normal;line-height:1.2}#equipment .grip{flex:0 0 18px}#equipment button.active{border-color:#7ef3ff;background:#225b70}#equipment .grip{cursor:grab;color:#a9bbd8;padding:4px;font-size:17px}#equipment small{margin:0;font-size:10px;white-space:nowrap}#sunMeter{position:absolute;z-index:3;top:145px;right:10px;width:min(190px,48vw);padding:5px 9px;background:#101a32c9;border:1px solid #ffffff33;border-radius:9px;pointer-events:none}#sunLabel{font-size:11px;font-weight:700;color:#ffca79}#sunTrack{height:9px;margin-top:4px;border-radius:6px;background:#37202c;overflow:hidden}#sunFill{width:0%;height:100%;background:linear-gradient(90deg,#ffd05c,#ff702c,#f32961);transition:width .25s}#ideationPanel{position:absolute;z-index:8;left:12px;right:12px;bottom:14px;max-width:640px;margin:auto;background:#101a32ee;border:1px solid #84a9dd88;border-radius:15px;padding:14px;box-shadow:0 12px 45px #0008;display:none;touch-action:pan-y}body.ideating #ideationPanel{display:block}body.ideating #equipment,body.ideating #sunMeter,body.ideating #help{display:none}#ideationPanel .ideation-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px}#ideationPanel input[type=range]{flex:1;min-width:120px;accent-color:#72dcff;touch-action:pan-x}#ideationPanel select{background:#18294c;color:white;border:1px solid #6788ba;border-radius:8px;padding:7px}#ideationPanel button{padding:8px 11px}#ideationPanel label{font-size:12px;color:#c8d8f3}#ideationPanel p{margin:8px 0;color:#c5d4ee;font-size:12px}#equipment.wobble{outline:2px dashed #7ef3ff;animation:wobble .3s infinite alternate}@keyframes wobble{from{rotate:-1deg}to{rotate:1deg}}@media(max-width:450px){#hud>div{padding:7px 9px}strong{font-size:14px}#help{font-size:12px;bottom:8px}}
-</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.27.0</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="music" aria-pressed="false" aria-label="Turn music on">♫ Off</button> <button id="ideationToggle" title="Preview music and visuals without combat">✧ Ideation</button> <button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="equipment"><span class="grip" id="grip" title="Hold to move console">⠿</span><small id="equipStatus">Select a blue planet</small><div class="equipment-slot"><button data-weapon="rocket" class="active" title="Rockets">🚀</button><small id="stat-rocket">∞</small></div><div class="equipment-slot"><button data-weapon="laser" title="Laser pulses">⚡</button><small id="stat-laser">0</small></div><div class="equipment-slot"><button data-weapon="photon" title="Homing photons">✦</button><small id="stat-photon">0</small></div><div class="equipment-slot"><button data-weapon="drive" title="Planetary drive">➤</button><small id="stat-drive">0</small></div><div class="equipment-slot"><button data-weapon="shield" title="Shield status">⬡</button><small id="stat-shield">0</small></div><div class="equipment-slot"><button data-weapon="atomic" title="Atomic probe: select your planet, then tap an enemy">☢</button><small id="stat-atomic">0</small></div></div><div id="sunMeter"><span id="sunLabel">☀ SUN · 0%</span><div id="sunTrack"><div id="sunFill"></div></div></div><section id="ideationPanel" aria-label="Audiovisual ideation studio"><strong>✧ Orbit Ideation Studio</strong><p>Explore the musical score and cosmic visuals without combat. Changes here are previews only.</p><div class="ideation-row"><label for="ideationLevel">Chapter</label><select id="ideationLevel"><option value="1">1 · Awakening</option><option value="2">2 · Ascension</option><option value="3">3 · Transcendence</option><option value="4">4 · Infinite</option></select><label for="ideationStage">Evolution <output id="ideationValue">0 / 10</output></label></div><div class="ideation-row"><button id="ideationPrev" title="Previous evolution">−</button><input id="ideationStage" type="range" min="0" max="10" value="0" step="1" aria-label="Evolution stage"><button id="ideationNext" title="Next evolution">+</button></div><div class="ideation-row"><button id="ideationPlay">▶ Auto-evolve</button><button id="ideationMusic">♫ Enable music</button><button id="ideationClose">Return to game</button></div><p id="ideationDescription">Stage 0 · Cosmic solitude</p></section><div id="banner" role="status"></div><div id="help">Hold multiple planets to fire · Tap asteroids for resources</div>
+</style></head><body><canvas id="game" aria-label="Planetary conquest game"></canvas><div id="hud"><div><strong>ORBIT <span id="version" style="font-size:11px;font-weight:500;color:#a9bbd8">v0.28.0</span></strong><small id="stats">Blue: 1 · Red: 2</small></div><div><button id="music" aria-pressed="false" aria-label="Turn music on">♫ Off</button> <button id="ideationToggle" title="Preview music and visuals without combat">✧ Ideation</button> <button id="restart">New system</button><small id="mode">Hold to aim</small></div></div><div id="equipment"><span class="grip" id="grip" title="Hold to move console">⠿</span><small id="equipStatus">Select a blue planet</small><div class="equipment-slot"><button data-weapon="rocket" class="active" title="Rockets">🚀</button><small id="stat-rocket">∞</small></div><div class="equipment-slot"><button data-weapon="laser" title="Laser pulses">⚡</button><small id="stat-laser">0</small></div><div class="equipment-slot"><button data-weapon="photon" title="Homing photons">✦</button><small id="stat-photon">0</small></div><div class="equipment-slot"><button data-weapon="drive" title="Planetary drive">➤</button><small id="stat-drive">0</small></div><div class="equipment-slot"><button data-weapon="shield" title="Shield status">⬡</button><small id="stat-shield">0</small></div><div class="equipment-slot"><button data-weapon="atomic" title="Atomic probe: select your planet, then tap an enemy">☢</button><small id="stat-atomic">0</small></div></div><div id="sunMeter"><span id="sunLabel">☀ SUN · 0%</span><div id="sunTrack"><div id="sunFill"></div></div></div><section id="ideationPanel" aria-label="Audiovisual ideation studio"><strong>✧ Orbit Ideation Studio</strong><p>Explore the musical score and cosmic visuals without combat. Changes here are previews only.</p><div class="ideation-row"><label for="ideationLevel">Chapter</label><select id="ideationLevel"><option value="1">1 · Awakening</option><option value="2">2 · Ascension</option><option value="3">3 · Transcendence</option><option value="4">4 · Infinite</option></select><label for="ideationStage">Evolution <output id="ideationValue">0 / 10</output></label></div><div class="ideation-row"><button id="ideationPrev" title="Previous evolution">−</button><input id="ideationStage" type="range" min="0" max="10" value="0" step="1" aria-label="Evolution stage"><button id="ideationNext" title="Next evolution">+</button></div><div class="ideation-row"><button id="ideationPlay">▶ Auto-evolve</button><button id="ideationMusic">♫ Enable music</button><button id="ideationClose">Return to game</button></div><p id="ideationDescription">Stage 0 · Cosmic solitude</p></section><div id="banner" role="status"></div><div id="help">Hold multiple planets to fire · Tap asteroids for resources</div>
 <script>
 'use strict';
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),stats=document.getElementById('stats'),banner=document.getElementById('banner');
@@ -417,40 +417,43 @@ const harmonicRoutes=[
  [0,5,2,4,3,5,4,0],
  [0,3,4,5,2,4,5,0]
 ];
+// Five 16-bar movements: A / B / A' / B' / C. A and B preserve their
+// recognizable identities on return; orchestration and register can evolve.
+const SONG_BARS=80,SECTION_BARS=16;
 function scoreState(i){
- const beat=i%8,bar=Math.floor(i/8),sentence=Math.floor(bar/8);
- const stage=Math.max(musicPeak,conquestStage()),world=worldState();
- const form=musicalForms[(Math.floor(stage/10)+sentence)%musicalForms.length];
- const route=harmonicRoutes[(Math.floor(stage/10)+Math.floor(sentence/2))%harmonicRoutes.length];
- const harmonicDegree=route[bar%8],root=modeNote(45,harmonicDegree,world.mood);
- const phase=bar%8,question=phase<4,turn=phase%4;
- const motif=question?form.motif:form.answer;
- const motifIndex=(beat+turn*2)%8;
- const original=motif[motifIndex];
- const seed=world.seed+Math.floor(sentence/2)*53;
- const answerTransform=question?0:((sentence%3===1)?1:0);
- const variation=turn===2&&hash(seed+motifIndex*11)>.72?1:0;
- const degree=original===null?null:original+answerTransform+variation;
- // Every fourth bar is a cadence. The final note returns to the tonic.
- const cadence=phase===7&&beat>=6;
+ const beat=i%8,bar=Math.floor(i/8),songBar=bar%SONG_BARS;
+ const movement=Math.floor(songBar/SECTION_BARS),sectionBar=songBar%SECTION_BARS;
+ const cycle=Math.floor(bar/SONG_BARS),stage=Math.max(musicPeak,conquestStage()),world=worldState();
+ const identity=movement===0||movement===2?0:movement===1||movement===3?1:2;
+ const form=musicalForms[(identity+Math.floor(stage/10))%musicalForms.length];
+ const route=harmonicRoutes[(identity+Math.floor(stage/10))%harmonicRoutes.length];
+ const harmonicDegree=route[Math.floor(sectionBar/2)%8],root=modeNote(45,harmonicDegree,world.mood);
+ const phraseBar=sectionBar%8,question=phraseBar<4,turn=phraseBar%4;
+ const motif=identity===2?musicalForms[(2+Math.floor(stage/10))%musicalForms.length][question?'motif':'answer']:form[question?'motif':'answer'];
+ const motifIndex=(beat+turn*2)%8,original=motif[motifIndex];
+ const seed=world.seed+cycle*71+identity*37;
+ // Variations happen at the orchestration level; returning themes keep their melodic contour.
+ const variation=identity===2&&turn===2&&hash(seed+motifIndex*11)>.78?1:0;
+ const degree=original===null?null:original+variation;
+ const cadence=sectionBar===15&&beat>=6;
  const melodicDegree=cadence?(beat===6?1:0):degree;
- const register=stage>=25&&sentence%4===3?19:12;
- return {beat,bar,sentence,stage,world,root,degree:melodicDegree,register,question,turn,seed,phase};
+ const register=12+(movement===2?2:movement===3?5:movement===4?7:0)+(stage>=25?7:0);
+ return {beat,bar,sentence:cycle*5+movement,stage,world,root,degree:melodicDegree,register,question,turn,seed,phase:phraseBar,sectionBar,movement,identity,cycle};
 }
 function scheduleBeat(i,t){
  if(i%8===0){musicPeak=Math.max(musicPeak,conquestStage());musicStage=musicPeak;}
  const targetEnergy=Math.min(1,Math.pow(Math.max(0,conquestStage())/20,.72));scoreEnergy+=(targetEnergy-scoreEnergy)*.18;
- const m=scoreState(i),{beat,bar,stage,world,root,degree,register,question,turn,seed,phase}=m;
+ const m=scoreState(i),{beat,bar,stage,world,root,degree,register,question,turn,seed,phase,sectionBar,movement,identity}=m;
  const arc=dramaticPhase(),peak=arc===3,anticipation=arc===2;
  const resolution=arc===4,quiet=arc===1&&stage<3; // Keep the musical engine driving through conquest events.
  // A long-form energy arc: 8-bar cycles, deliberate breakdowns and emphatic arrivals.
- const intensity=scoreEnergy,sectionBar=bar%8;
- const rise=sectionBar>=3&&sectionBar<=5,preDrop=sectionBar===6,arrival=sectionBar===7&&beat>=6;
- const drop=sectionBar===0&&bar>=8&&intensity>.2;
+ const intensity=scoreEnergy;
+ const rise=sectionBar>=8&&sectionBar<=13,preDrop=sectionBar===14,arrival=sectionBar===15&&beat>=6;
+ const drop=sectionBar===0&&bar>=16&&intensity>.2;
  const kinetic=stage>=3&&intensity>.08;
- const breath=preDrop&&beat>=6||sectionBar===7&&beat>=4&&beat<6;
+ const breath=preDrop&&beat>=6||sectionBar===15&&beat>=4&&beat<6;
  const drive=kinetic&&!breath&&!quiet;
- const driveVol=.09+.065*intensity;
+ const driveVol=(.09+.065*intensity)*(movement===4?1.12:1);
  const build=phase===3||phase===6;
  const cadence=phase===7;
  const rootBass=root-12,leadRoot=45+register;
@@ -494,13 +497,13 @@ function scheduleBeat(i,t){
      if(stage>=3&&(beat%2===1||stage>=9&&beat%2===0))drum('hat',t,.018+.016*intensity);
      if(stage>=6&&build&&beat===7)drum('snare',t+BEAT*.5,.025);
      // Controlled 16th-note percussion fills, reserved for phrase boundaries.
-     if(rise&&stage>=7&&sectionBar===5&&beat>=4&&beat%2===0)drum('hat',t+BEAT*.5,.02);
+     if(rise&&stage>=7&&sectionBar===13&&beat>=4&&beat%2===0)drum('hat',t+BEAT*.5,.02);
    }else if(preDrop&&beat===0)drum('kick',t,.085);
  }
  // Rhythmic propulsion: offbeat low pulse interlocks with the kick, never competes with lead.
  if(drive&&beat%2===1&&stage>=5)bassPulse(rootBass+(beat===7?-1:7),t+BEAT*.48,BEAT*.42,.022+.019*intensity);
  // Build tension using rising ostinato; thin it out just before the arrival.
- if(rise&&!breath&&stage>=5&&beat%2===1){const riseDegree=(beat+sectionBar-3)%7;note(modeNote(root+24,riseDegree,world.mood),t,BEAT*.44,'triangle',.006+.006*intensity,.016);}
+ if(rise&&!breath&&stage>=5&&beat%2===1){const riseDegree=(beat+sectionBar-8)%7;note(modeNote(root+24,riseDegree,world.mood),t,BEAT*.44,'triangle',.006+.006*intensity,.016);}
  if(drop&&beat===0){drum('kick',t,.16);drum('snare',t,.07);bassPulse(rootBass,t,BEAT*3,.085);note(root+24,t,BEAT*3,'triangle',.032,.08);scoreImpact=elapsed;}
  if(arrival){drum('snare',t,.08);if(beat===7){drum('kick',t+BEAT*.5,.13);scoreImpact=elapsed;}}
 
@@ -525,7 +528,7 @@ function scheduleBeat(i,t){
  if(peak&&beat===0&&stage>=4){drum('kick',t,.12);note(root+12,t,BEAT*2,'triangle',.024,.04);}
  // Space-rave evolution: distinct psytrance and dubstep phrases, not constant layering.
  const psy=stage>=4,deep=stage>=7,heavy=stage>=11;
- const dubstepBar=heavy&&(sectionBar===4||stage>=19&&sectionBar===5); // Half-time bass passage creates contrast.
+ const dubstepBar=heavy&&(movement===1||movement===3)&&(sectionBar===4||sectionBar===5||sectionBar===12); // Half-time bass passage creates contrast.
  if(psy&&!breath&&!quiet){
    // Gated 16th-note psytrance arpeggio with controlled rests.
    if(beat%2===1||stage>=9&&rise&&beat%2===0){
@@ -555,8 +558,8 @@ function scheduleBeat(i,t){
  }
  // Psytrance-to-rave architecture: dramatic pre-drop vacuum, risers, and a huge return.
  // These events are phrase-locked so the climax feels earned rather than random.
- if(stage>=6&&!quiet&&sectionBar===6&&beat===0)tranceRiser(root+12,t,BEAT*5.7,.009+.014*intensity);
- if(stage>=9&&!quiet&&sectionBar===7&&beat===6){
+ if(stage>=6&&!quiet&&sectionBar===14&&beat===0)tranceRiser(root+12,t,BEAT*5.7,.009+.014*intensity);
+ if(stage>=9&&!quiet&&sectionBar===15&&beat===6){
    tranceRiser(root+19,t,BEAT*1.6,.014+.016*intensity);
    if(stage>=15)drum('snare',t+BEAT*.5,.05);
  }
@@ -564,14 +567,21 @@ function scheduleBeat(i,t){
    raveStab(root,t,.021+.013*intensity);
    spaceShimmer(root+24,t,BEAT*6,.017+.012*intensity);
  }
- if(stage>=13&&!quiet&&sectionBar===2&&beat===0)raveStab(root,t,.015+.011*intensity);
+ if(stage>=13&&!quiet&&sectionBar===6&&beat===0)raveStab(root,t,.015+.011*intensity);
  // Higher evolution introduces rhythmic call-and-response between bass and lead.
  if(stage>=18&&!quiet&&dubstepBar&&beat===2){
    wobbleBass(rootBass+5,t,BEAT*1.1,.045+.025*intensity,11);
  }
- if(stage>=24&&!quiet&&sectionBar===3&&beat===0){
+ if(stage>=24&&!quiet&&sectionBar===11&&beat===0){
    // A euphoric octave leap opens the harmonic landscape before the next build.
    spaceShimmer(modeNote(root+36,4,world.mood),t,BEAT*7,.022+.011*intensity);
+ }
+ // Movement C is the earned culmination of the full 80-bar song form.
+ // Preserve A/B themes by saving the densest euphoric counterline for C.
+ if(movement===4&&stage>=8&&!quiet&&!breath){
+   if(beat===0&&sectionBar%4===0)spaceShimmer(modeNote(root+36,4,world.mood),t,BEAT*7,.024+.014*intensity);
+   if(stage>=12&&beat===3&&sectionBar>=8)raveStab(root,t,.015+.009*intensity);
+   if(stage>=16&&beat===7&&rise)cosmicPluck(modeNote(root+31,5,world.mood),t,BEAT*.75,.019+.009*intensity,1.7);
  }
  // At major arrivals, the familiar motif is harmonized, not replaced by noise.
  if(peak&&degree!==null&&isAccent){
