@@ -1,0 +1,92 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Build installable Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out Orbit
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Prepare web app for Android
+        run: |
+          mkdir -p www
+          cp index.html www/index.html
+          if [ -d assets ]; then cp -R assets www/assets; fi
+          cat > package.json <<'EOF'
+          {
+            "name": "orbit-android",
+            "version": "0.33.1",
+            "private": true,
+            "type": "module",
+            "dependencies": {
+              "@capacitor/core": "^7.4.0",
+              "@capacitor/android": "^7.4.0"
+            },
+            "devDependencies": {
+              "@capacitor/cli": "^7.4.0"
+            }
+          }
+          EOF
+          cat > capacitor.config.json <<'EOF'
+          {
+            "appId": "com.uncommonaims.orbit",
+            "appName": "Orbit",
+            "webDir": "www",
+            "android": { "allowMixedContent": false }
+          }
+          EOF
+          npm install --no-audit --no-fund
+
+      - name: Generate Android project
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Name APK
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/Orbit-${GITHUB_REF_NAME}-debug.apk
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Orbit-Android-APK
+          path: dist/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attach APK to GitHub release for version tags
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "Orbit $GITHUB_REF_NAME" --notes "Android debug APK for Orbit. Install manually on Android; this is not a Play Store release."
+          gh release upload "$GITHUB_REF_NAME" dist/*.apk --clobber
