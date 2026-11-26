@@ -733,35 +733,23 @@ function resetMusicProgression(){
  earnedMusicPoints=0;activeMusicPoints=0;queuedMusicPoints=0;gameMusicBeat=0;gameMusicSection=0;scoreClock=0;scoreLast=0;scoreTarget=-1;scoreOutgoing=-1;scoreFadeEnd=0;for(const d of scoreDecks){d.gain.gain.cancelScheduledValues(audio.currentTime);d.gain.gain.value=0;if(d.el.readyState)d.el.currentTime=0;}
 }
 const scoreFiles=['1.1-emergence','2.1-awakening','3.1-ascension','4.1-convergence','5.1-transcendence'];
-let scoreDecks=[],scoreClock=0,scoreLast=0,scoreTarget=-1,scoreFadeEnd=0,scoreOutgoing=-1;
-function initScoreDecks(){if(scoreDecks.length)return;scoreDecks=scoreFiles.map(name=>{const el=new Audio();el.preload='none';el.loop=true;el.src='assets/music/'+name+'.mp3';const source=audio.createMediaElementSource(el),gain=audio.createGain();gain.gain.value=0;source.connect(gain);gain.connect(master);return {el,gain,pending:false,retryAt:0,started:false,positioned:false};});}
-function startScoreDeck(d,now){if(d.pending||now<d.retryAt||!d.el.paused)return;if(!d.positioned&&Number.isFinite(d.el.duration)&&d.el.duration>0){d.el.currentTime=scoreClock%d.el.duration;d.positioned=true;}d.pending=true;d.el.play().then(()=>{d.started=true;d.pending=false;}).catch(()=>{d.pending=false;d.retryAt=audio.currentTime+2;});}
-function stopScoreDeck(d,now){d.el.pause();d.positioned=false;d.gain.gain.cancelScheduledValues(now);d.gain.gain.setValueAtTime(0,now);}
+let scoreDecks=[],scoreClock=0,scoreLast=0,scoreTarget=-1,scoreFadeEnd=0;
+function initScoreDecks(){if(scoreDecks.length)return;scoreDecks=scoreFiles.map(name=>{const el=new Audio('assets/music/'+name+'.mp3');el.loop=true;el.preload='none';const source=audio.createMediaElementSource(el),gain=audio.createGain();gain.gain.value=0;source.connect(gain);gain.connect(master);return {el,gain,pending:false,retryAt:0,started:false,positioned:false};});}
+function startScoreDeck(d,now){if(d.pending||now<d.retryAt||!d.el.paused)return;d.pending=true;d.el.preload='auto';d.el.play().then(()=>{d.started=true;d.pending=false;}).catch(()=>{d.pending=false;d.retryAt=audio.currentTime+2;});}
 function updateScoreDecks(stage){
  if(!scoreDecks.length)return false;
  const now=audio.currentTime,preview=stage<0||soundLabActive||visualSoundPreview||ideationActive;
  if(!preview&&scoreLast)scoreClock+=Math.max(0,now-scoreLast);scoreLast=now;
- if(preview){for(const d of scoreDecks)stopScoreDeck(d,now);scoreTarget=-1;scoreOutgoing=-1;scoreFadeEnd=0;return false;}
- const target=Math.max(0,Math.min(4,stage));
- const ready=d=>d.started&&!d.el.paused&&!d.el.seeking&&d.el.readyState>=3;
- if(scoreOutgoing>=0&&now>=scoreFadeEnd){stopScoreDeck(scoreDecks[scoreOutgoing],now);scoreOutgoing=-1;}
+ if(preview){for(const d of scoreDecks){d.gain.gain.cancelScheduledValues(now);d.gain.gain.setValueAtTime(0,now);d.el.pause();d.positioned=false;}scoreTarget=-1;scoreFadeEnd=0;return false;}
+ const target=Math.max(0,Math.min(4,stage)),incoming=scoreDecks[target];
+ if(now<scoreFadeEnd){return true;}
+ for(let j=0;j<scoreDecks.length;j++){if(j!==scoreTarget&&j!==target){const d=scoreDecks[j];d.el.pause();d.positioned=false;}}
  if(scoreTarget>=0)startScoreDeck(scoreDecks[scoreTarget],now);
- if(scoreOutgoing>=0){
-  if(!ready(scoreDecks[scoreTarget])&&ready(scoreDecks[scoreOutgoing])){
-   const bad=scoreTarget;scoreTarget=scoreOutgoing;scoreOutgoing=-1;stopScoreDeck(scoreDecks[bad],now);const g=scoreDecks[scoreTarget].gain.gain;g.cancelScheduledValues(now);g.setTargetAtTime(.75,now,.08);scoreFadeEnd=now+.4;
-  }
-  return true;
- }
- for(let j=0;j<scoreDecks.length;j++)if(j!==target&&j!==scoreTarget&&!scoreDecks[j].el.paused)stopScoreDeck(scoreDecks[j],now);
- const incoming=scoreDecks[target];
- if(target!==scoreTarget){
-  if(scoreTarget>=0&&!incoming.positioned){if(incoming.el.readyState===0){if(incoming.el.preload==='none'){incoming.el.preload='auto';incoming.el.load();}return true;}if(Number.isFinite(incoming.el.duration)&&incoming.el.duration>0){incoming.el.currentTime=scoreClock%incoming.el.duration;incoming.positioned=true;}}
-  startScoreDeck(incoming,now);
-  if(now>=scoreFadeEnd&&ready(incoming)){
-   scoreOutgoing=scoreTarget;scoreTarget=target;scoreFadeEnd=now+(scoreOutgoing<0?.4:6);
-   const g=incoming.gain.gain;g.cancelScheduledValues(now);g.setValueAtTime(g.value,now);g.linearRampToValueAtTime(.75,scoreFadeEnd);
-   if(scoreOutgoing>=0){const old=scoreDecks[scoreOutgoing].gain.gain;old.cancelScheduledValues(now);old.setValueAtTime(old.value,now);old.linearRampToValueAtTime(0,scoreFadeEnd);}
-  }
+ startScoreDeck(incoming,now);
+ if(target!==scoreTarget&&incoming.started&&!incoming.el.paused&&incoming.el.readyState>=3&&!incoming.el.seeking){
+  if(!incoming.positioned){incoming.positioned=true;if(scoreTarget>=0&&Number.isFinite(incoming.el.duration)&&incoming.el.duration>0){incoming.el.currentTime=scoreClock%incoming.el.duration;return true;}}
+  const first=scoreTarget<0;scoreTarget=target;scoreFadeEnd=now+(first?.4:6);
+  for(let j=0;j<scoreDecks.length;j++){const g=scoreDecks[j].gain.gain;g.cancelScheduledValues(now);g.setValueAtTime(g.value,now);g.linearRampToValueAtTime(j===target?.75:0,scoreFadeEnd);}
  }
  return scoreTarget>=0;
 }
