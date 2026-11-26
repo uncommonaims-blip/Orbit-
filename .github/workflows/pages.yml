@@ -21,11 +21,16 @@ jobs:
       - name: Check out game
         uses: actions/checkout@v4
       - name: Verify game entry point
-        run: test -s index.html
+        run: |
+          test -s index.html
+          test -s surface3d.js
+          node --input-type=module --check < surface3d.js
       - name: Prepare Pages site
         run: |
           mkdir -p _site
           cp index.html _site/index.html
+          cp surface3d.js _site/surface3d.js
+          test -s _site/surface3d.js
           cp README.md _site/README.md
           touch _site/.nojekyll
       - name: Upload Pages artifact
