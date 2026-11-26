@@ -32,6 +32,9 @@ jobs:
           cp surface3d.js _site/surface3d.js
           test -s _site/surface3d.js
           cp README.md _site/README.md
+          mkdir -p _site/assets
+          cp -R assets/music _site/assets/music
+          test "$(find _site/assets/music -name '*.mp3' | wc -l)" -ge 5
           touch _site/.nojekyll
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
