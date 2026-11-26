@@ -88,8 +88,8 @@ function orbitVelocity(p,a){const h=.0001,A=orbitPoint(p,a-h),B=orbitPoint(p,a+h
 function planetDepth(p){const extent=Math.max(1,p.orbit*scale*ORBIT_Y),relative=(p.y-center.y)/extent;return Math.max(.72,Math.min(1.32,1+relative*.24));}
 function position(){
  for(const p of planets){if(p.freeOrbit||p.moonHost)continue;const a=p.angle+elapsed*p.speed,point=orbitPoint(p,a);p.x=point.x+p.perturbX;p.y=point.y+p.perturbY;}
- for(const p of planets){if(!p.moonHost)continue;const h=p.moonHost;if(h.units<=0){releaseMoon(p);continue;}p.moonRadius=Math.max(p.moonRadius,(radius(p)+radius(h)+14*scale)/.83);p.moonAngle+=p.moonSpeed/60;const a=p.moonAngle;p.x=h.x+Math.cos(a)*p.moonRadius;p.y=h.y+Math.sin(a)*p.moonRadius*.83;}
- for(let pass=0;pass<12;pass++){let changed=false;for(let i=0;i<planets.length;i++)for(let j=i+1;j<planets.length;j++){const a=planets[i],b=planets[j];if(a.owner!=='player'&&b.owner!=='player')continue;const gap=radius(a)+radius(b)+12*scale,dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d>=gap-.01)continue;const nx=d>1e-6?dx/d:Math.cos(i+j),ny=d>1e-6?dy/d:Math.sin(i+j),push=gap-d,wa=a.owner==='player'&&b.owner!=='player'?0:b.owner==='player'&&a.owner!=='player'?1:a.moonHost===b?1:b.moonHost===a?0:.5;a.x-=nx*push*wa;a.y-=ny*push*wa;b.x+=nx*push*(1-wa);b.y+=ny*push*(1-wa);changed=true;}if(!changed)break;}
+ for(const p of planets){if(!p.moonHost)continue;const h=p.moonHost;if(h.units<=0){releaseMoon(p);continue;}p.moonRadius=Math.max(p.moonRadius,1.75*(radius(p)+radius(h)+14*scale)/.83);p.moonAngle+=p.moonSpeed/60;const a=p.moonAngle;p.x=h.x+Math.cos(a)*p.moonRadius;p.y=h.y+Math.sin(a)*p.moonRadius*.83;}
+ for(let pass=0;pass<32;pass++){let changed=false;for(let i=0;i<planets.length;i++)for(let j=i+1;j<planets.length;j++){const a=planets[i],b=planets[j];if(a.owner!=='player'&&b.owner!=='player')continue;const gap=radius(a)+radius(b)+28*scale,dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d>=gap-.001)continue;const nx=d>1e-6?dx/d:Math.cos(i+j),ny=d>1e-6?dy/d:Math.sin(i+j),push=gap-d,wa=a.owner==='player'&&b.owner!=='player'?0:b.owner==='player'&&a.owner!=='player'?1:a.moonHost===b?1:b.moonHost===a?0:.5;a.x-=nx*push*wa;a.y-=ny*push*wa;b.x+=nx*push*(1-wa);b.y+=ny*push*(1-wa);changed=true;}if(!changed)break;}
 }
 function releaseMoon(p){const h=p.moonHost;if(!h)return;p.moonHost=null;p.moonCooldown=elapsed+8;const a=p.angle+elapsed*p.speed,base=orbitPoint(p,a);p.perturbX=p.x-base.x;p.perturbY=p.y-base.y;p.perturbVX=0;p.perturbVY=0;}
 function updatePlanetGravity(dt){
@@ -121,7 +121,7 @@ function updatePlanetGravity(dt){
    const minR=radius(p)+radius(host)+14*scale;
    const maxR=Math.max(minR+8*scale,Math.min(95*scale,Math.max(40*scale,d)));
    if(d<maxR+20*scale){
-    p.moonHost=host;p.moonRadius=1.75*Math.max(minR,Math.min(maxR,d));p.moonAngle=Math.atan2(dy/.83,dx);
+    p.moonHost=host;p.moonRadius=3.0625*Math.max(minR,Math.min(maxR,d));p.moonAngle=Math.atan2(dy/.83,dx);
     p.moonSpeed=(p.speed>=0?1:-1)*Math.max(.3,Math.min(1.6,1.1*Math.sqrt(best/3)));
     captureWaves.push({x:p.x,y:p.y,at:elapsed,hue:180});
    }
